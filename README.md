@@ -1,4 +1,4 @@
-# telegram__random_bashim_bot
+# telegram__random_bashim_bot (#python3 #telegram #bot #bashim)
 
 [Бот](https://telegram.me/random_bashim_bot) телеграмма для получения случайных цитат http://bash.im/.
 
