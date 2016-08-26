@@ -70,13 +70,7 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 
 
-def start(bot, update):
-    try:
-        reply_markup = ReplyKeyboardMarkup([[KeyboardButton('Хочу цитату!')]], resize_keyboard=True)
-        bot.send_message(update.message.chat_id, text='Выбор:', reply_markup=reply_markup)
-
-    except Exception as e:
-        log.exception(e)
+REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup([[KeyboardButton('Хочу цитату!')]], resize_keyboard=True)
 
 
 def error(bot, update, error):
@@ -100,7 +94,10 @@ def work(bot, update):
             return
 
         # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
-        bot.sendMessage(update.message.chat_id, url + '\n\n' + text, disable_web_page_preview=True)
+        bot.sendMessage(update.message.chat_id,
+                        url + '\n\n' + text,
+                        disable_web_page_preview=True,
+                        reply_markup=REPLY_KEYBOARD_MARKUP)
 
     except Exception as e:
         log.exception(e)
@@ -116,7 +113,7 @@ if __name__ == '__main__':
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('start', work))
     dp.add_handler(MessageHandler([Filters.text], work))
 
     # log all errors
