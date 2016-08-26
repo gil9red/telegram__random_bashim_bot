@@ -47,10 +47,10 @@ def get_random_quote():
         with urlopen(Request(config.URL, headers={'User-Agent': config.USER_AGENT})) as f:
             root = etree.HTML(f.read())
 
-            quote_el = root.cssselect('.quote')[0]
-            text_el = quote_el.cssselect('.text')[0]
+            quote_el = root.xpath('//*[@class="quote"]')[0]
+            text_el = quote_el.xpath('//*[@class="text"]')[0]
 
-            url = urljoin(config.URL, quote_el.cssselect('.id')[0].attrib['href'])
+            url = urljoin(config.URL, quote_el.xpath('//*[@class="id"]')[0].attrib['href'])
             log.debug(url)
 
             # По умолчанию, lxml работает с байтами и по умолчанию считает, что работает с ISO8859-1 (latin-1)
