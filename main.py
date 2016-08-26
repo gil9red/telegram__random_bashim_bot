@@ -88,7 +88,10 @@ def work(bot, update):
 
     try:
         text, url = get_random_quote()
-        log.debug('Quote text (%s):\n%s', url, text)
+        if config.LOG_QUOTE_TEXT:
+            log.debug('Quote text (%s):\n%s', url, text)
+        else:
+            log.debug('Quote text (%s)', url)
 
         if text is None:
             log.warn('Dont receive quote...')
