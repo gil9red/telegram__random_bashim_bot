@@ -47,6 +47,7 @@ def get_random_quote():
         with urlopen(Request(config.URL, headers={'User-Agent': config.USER_AGENT})) as f:
             root = etree.HTML(f.read())
 
+            # TODO: брать рандомный элемент с цитатой
             quote_el = root.xpath('//*[@class="quote"]')[0]
             text_el = quote_el.xpath('//*[@class="text"]')[0]
 
