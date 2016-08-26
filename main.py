@@ -57,7 +57,8 @@ def get_random_quote():
             # а на баше кодировка страниц cp1251, поэтому сначала нужно текст раскодировать в байты,
             # а потом закодировать как cp1251
             quote_text = '\n'.join([text.encode('ISO8859-1').decode('cp1251') for text in text_el.itertext()])
-            log.debug(quote_text)
+            if config.LOG_QUOTE_TEXT:
+                log.debug(quote_text)
 
     except Exception as e:
         log.exception(e)
