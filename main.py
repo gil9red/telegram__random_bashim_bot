@@ -4,10 +4,20 @@
 __author__ = 'ipetrash'
 
 
-def get_logger():
-    import logging
-    import sys
+import logging
+import sys
+from urllib.request import urlopen, Request
+from urllib.parse import urljoin
+import random
 
+import config
+
+from lxml import etree
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
+from telegram import ReplyKeyboardMarkup, KeyboardButton
+
+
+def get_logger():
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
 
@@ -31,47 +41,65 @@ def get_logger():
 log = get_logger()
 
 
-import config
+# Хранилище цитат башорга, из которого будут браться цитаты, и посылаться в телеграм.
+# Когда этот список будет пустым, оно будет заполнено с сайта.
+QUOTES_LIST = list()
+
+REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup([[KeyboardButton('Хочу цитату!')]], resize_keyboard=True)
 
 
-from lxml import etree
-from urllib.request import urlopen, Request
-from urllib.parse import urljoin
+def get_random_quotes_list():
+    log.debug('get_random_quotes_list')
 
-
-def get_random_quote():
-    log.debug('get_random_quote')
-    quote_text, url = None, None
+    quotes = list()
 
     try:
         with urlopen(Request(config.URL, headers={'User-Agent': config.USER_AGENT})) as f:
             root = etree.HTML(f.read())
 
-            # TODO: брать рандомный элемент с цитатой
-            quote_el = root.xpath('//*[@class="quote"]')[0]
-            text_el = quote_el.xpath('//*[@class="text"]')[0]
+            for quote_el in root.xpath('//*[@class="quote"]'):
+                try:
+                    url = urljoin(config.URL, quote_el.xpath('*[@class="actions"]/*[@class="id"]')[0].attrib['href'])
 
-            url = urljoin(config.URL, quote_el.xpath('//*[@class="id"]')[0].attrib['href'])
-            log.debug(url)
+                    # По умолчанию, lxml работает с байтами и по умолчанию считает, что работает с ISO8859-1 (latin-1)
+                    # а на баше кодировка страниц cp1251, поэтому сначала нужно текст раскодировать в байты,
+                    # а потом закодировать как cp1251
+                    text_el = quote_el.xpath('*[@class="text"]')[0]
+                    quote_text = '\n'.join(text.encode('ISO8859-1').decode('cp1251') for text in text_el.itertext())
 
-            # По умолчанию, lxml работает с байтами и по умолчанию считает, что работает с ISO8859-1 (latin-1)
-            # а на баше кодировка страниц cp1251, поэтому сначала нужно текст раскодировать в байты,
-            # а потом закодировать как cp1251
-            quote_text = '\n'.join([text.encode('ISO8859-1').decode('cp1251') for text in text_el.itertext()])
-            if config.LOG_QUOTE_TEXT:
-                log.debug(quote_text)
+                    quotes.append((quote_text, url))
+
+                except IndexError:
+                    pass
+
+    except Exception as e:
+        log.exception(e + '\n\nQuote: ' + etree.tostring(quote_el))
+
+    return quotes
+
+
+def get_random_quote():
+    global QUOTES_LIST
+    log.debug('get_random_quote (QUOTES_LIST: %s)', len(QUOTES_LIST))
+
+    quote_text, url = None, None
+
+    try:
+        # Если пустой, запрос и заполняем список новыми цитатами
+        if not QUOTES_LIST:
+            log.debug('QUOTES_LIST is empty, do new request.')
+            QUOTES_LIST += get_random_quotes_list()
+
+            log.debug('New quotes: %s.', len(QUOTES_LIST))
+
+        # Перемешиваем список цитат и берем последний элемент
+        random.shuffle(QUOTES_LIST)
+        quote_text, url = QUOTES_LIST.pop()
 
     except Exception as e:
         log.exception(e)
 
     return quote_text, url
-
-
-from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
-from telegram import ReplyKeyboardMarkup, KeyboardButton
-
-
-REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup([[KeyboardButton('Хочу цитату!')]], resize_keyboard=True)
 
 
 def error(bot, update, error):
@@ -105,10 +133,6 @@ def work(bot, update):
         bot.sendMessage(update.message.chat_id, config.ERROR_TEXT)
 
 
-# TODO: оптимизировать работу, кэшируя цитаты:
-# Держать в памяти цитаты и при запросе от телеграмма, вытаскивать случайную, пока не закончится список
-# После того как список закончился, сделать запрос на башорг, скачать следующую пачку цитат, поместить в список
-# и отдать случайную
 if __name__ == '__main__':
     log.debug('Start')
 
