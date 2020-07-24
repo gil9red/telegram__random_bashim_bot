@@ -12,9 +12,11 @@ import random
 
 import config
 
-from lxml import etree
-from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
-from telegram import ReplyKeyboardMarkup, KeyboardButton
+from bs4 import BeautifulSoup
+
+# pip install python-telegram-bot
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext
+from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
 
 
 def get_logger():
@@ -51,29 +53,23 @@ REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup([[KeyboardButton('Хочу цита�
 def get_random_quotes_list():
     log.debug('get_random_quotes_list')
 
-    quotes = list()
+    quotes = []
 
     try:
         with urlopen(Request(config.URL, headers={'User-Agent': config.USER_AGENT})) as f:
-            root = etree.HTML(f.read())
+            root = BeautifulSoup(f.read(), 'html.parser')
 
-            for quote_el in root.xpath('//*[@class="quote"]'):
+            for quote_el in root.select('.quote'):
                 try:
-                    url = urljoin(config.URL, quote_el.xpath('*[@class="actions"]/*[@class="id"]')[0].attrib['href'])
-
-                    # По умолчанию, lxml работает с байтами и по умолчанию считает, что работает с ISO8859-1 (latin-1)
-                    # а на баше кодировка страниц cp1251, поэтому сначала нужно текст раскодировать в байты,
-                    # а потом закодировать как cp1251
-                    text_el = quote_el.xpath('*[@class="text"]')[0]
-                    quote_text = '\n'.join(text.encode('ISO8859-1').decode('cp1251') for text in text_el.itertext())
-
+                    href = quote_el.select_one('.quote__header_permalink')['href']
+                    url = urljoin(config.URL, href)
+                    quote_text = quote_el.select_one('.quote__body').get_text(separator='\n', strip=True)
                     quotes.append((quote_text, url))
-
                 except IndexError:
                     pass
 
     except Exception as e:
-        log.exception(e + '\n\nQuote: ' + etree.tostring(quote_el))
+        log.exception(f'{e} + \n\nQuote:\n{quote_el}')
 
     return quotes
 
@@ -102,13 +98,14 @@ def get_random_quote():
     return quote_text, url
 
 
-def error(bot, update, error):
-    log.error('Update "%s" caused error "%s"' % (update, error))
+def error_callback(update, context):
+    log.warning('Update "%s" caused error "%s"', update, context.error)
 
 
 # TODO: может с цитатой передавать дату и рейтинг?
-def work(bot, update):
+def work(update: Update, context: CallbackContext):
     log.debug('work')
+    bot = context.bot
 
     try:
         text, url = get_random_quote()
@@ -117,16 +114,18 @@ def work(bot, update):
         else:
             log.debug('Quote text (%s)', url)
 
-        if text is None:
-            log.warn('Dont receive quote...')
+        if not text:
+            log.warning('Dont receive quote...')
             bot.sendMessage(update.message.chat_id, config.ERROR_TEXT)
             return
 
         # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
-        bot.sendMessage(update.message.chat_id,
-                        url + '\n\n' + text,
-                        disable_web_page_preview=True,
-                        reply_markup=REPLY_KEYBOARD_MARKUP)
+        bot.sendMessage(
+            update.message.chat_id,
+            url + '\n\n' + text,
+            disable_web_page_preview=True,
+            reply_markup=REPLY_KEYBOARD_MARKUP
+        )
 
     except Exception as e:
         log.exception(e)
@@ -137,16 +136,16 @@ if __name__ == '__main__':
     log.debug('Start')
 
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater(config.TOKEN)
+    updater = Updater(config.TOKEN, use_context=True)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler('start', work))
-    dp.add_handler(MessageHandler([Filters.text], work))
+    dp.add_handler(MessageHandler(Filters.text, work))
 
     # log all errors
-    dp.add_error_handler(error)
+    dp.add_error_handler(error_callback)
 
     # Start the Bot
     updater.start_polling()
