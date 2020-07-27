@@ -47,7 +47,9 @@ log = get_logger()
 # Когда этот список будет пустым, оно будет заполнено с сайта.
 QUOTES_LIST = list()
 
-REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup([[KeyboardButton('Хочу цитату!')]], resize_keyboard=True)
+REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
+    [['Хочу цитату!']], resize_keyboard=True
+)
 
 
 # SOURCE: https://github.com/gil9red/SimplePyScripts/blob/511a9fb408d8e8e470ce7f3ea4bcbf8d632e10a6/random_quote_bashim.py#L16
@@ -80,7 +82,6 @@ def get_random_quotes_list():
 
 
 def get_random_quote():
-    global QUOTES_LIST
     log.debug('get_random_quote (QUOTES_LIST: %s)', len(QUOTES_LIST))
 
     quote_text, url = None, None
@@ -89,12 +90,10 @@ def get_random_quote():
         # Если пустой, запрос и заполняем список новыми цитатами
         if not QUOTES_LIST:
             log.debug('QUOTES_LIST is empty, do new request.')
-            QUOTES_LIST += get_random_quotes_list()
+            QUOTES_LIST.extend(get_random_quotes_list())
 
             log.debug('New quotes: %s.', len(QUOTES_LIST))
 
-        # Перемешиваем список цитат и берем последний элемент
-        random.shuffle(QUOTES_LIST)
         quote_text, url = QUOTES_LIST.pop()
 
     except Exception as e:
@@ -103,7 +102,7 @@ def get_random_quote():
     return quote_text, url
 
 
-def error_callback(update, context):
+def error_callback(update: Update, context: CallbackContext):
     log.warning('Update "%s" caused error "%s"', update, context.error)
 
 
@@ -120,7 +119,7 @@ def work(update: Update, context: CallbackContext):
             log.debug('Quote text (%s)', url)
 
         if not text:
-            log.warning('Dont receive quote...')
+            log.warning("Don't receive quote...")
             bot.sendMessage(update.message.chat_id, config.ERROR_TEXT)
             return
 
