@@ -104,7 +104,7 @@ def get_random_quote():
 
 def get_html_message(text: str, url: str) -> str:
     link = f"""<a href="{url}">#{url.split('/')[-1]}</a>"""
-    return html.escape(text) + '\n' + link
+    return html.escape(text) + '\n\n' + link
 
 
 def error_callback(update: Update, context: CallbackContext):
