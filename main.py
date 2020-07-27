@@ -108,7 +108,13 @@ def error_callback(update: Update, context: CallbackContext):
 
 # TODO: может с цитатой передавать дату и рейтинг?
 def work(update: Update, context: CallbackContext):
-    log.debug('work[chat_id=%s]', update.message.chat_id)
+    chat_id = None
+    if update.effective_chat:
+        chat_id = update.effective_chat.id
+    elif update.effective_user:
+        chat_id = update.effective_user.id
+
+    log.debug('work[chat_id=%s]', chat_id)
     bot = context.bot
 
     try:
