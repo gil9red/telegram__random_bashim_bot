@@ -4,6 +4,7 @@
 __author__ = 'ipetrash'
 
 
+import html
 import logging
 import sys
 from urllib.request import urlopen, Request
@@ -102,6 +103,11 @@ def get_random_quote():
     return quote_text, url
 
 
+def get_html_message(text: str, url: str) -> str:
+    link = f"""<a href="{url}">#{url.split('/')[-1]}</a>"""
+    return html.escape(text) + '\n' + link
+
+
 def error_callback(update: Update, context: CallbackContext):
     log.warning('Update "%s" caused error "%s"', update, context.error)
 
@@ -115,7 +121,6 @@ def work(update: Update, context: CallbackContext):
         chat_id = update.effective_user.id
 
     log.debug('work[chat_id=%s]', chat_id)
-    bot = context.bot
 
     try:
         text, url = get_random_quote()
@@ -126,20 +131,19 @@ def work(update: Update, context: CallbackContext):
 
         if not text:
             log.warning("Don't receive quote...")
-            bot.sendMessage(update.message.chat_id, config.ERROR_TEXT)
+            update.message.reply_text(config.ERROR_TEXT)
             return
 
         # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
-        bot.sendMessage(
-            update.message.chat_id,
-            url + '\n\n' + text,
+        update.message.reply_html(
+            get_html_message(text, url),
             disable_web_page_preview=True,
             reply_markup=REPLY_KEYBOARD_MARKUP
         )
 
     except Exception as e:
         log.exception(e)
-        bot.sendMessage(update.message.chat_id, config.ERROR_TEXT)
+        update.message.reply_text(config.ERROR_TEXT)
 
 
 if __name__ == '__main__':
