@@ -9,7 +9,6 @@ import logging
 import sys
 from urllib.request import urlopen, Request
 from urllib.parse import urljoin
-import random
 
 import config
 
@@ -17,7 +16,7 @@ from bs4 import BeautifulSoup
 
 # pip install python-telegram-bot
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext
-from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
+from telegram import ReplyKeyboardMarkup, Update
 
 
 def get_logger():
