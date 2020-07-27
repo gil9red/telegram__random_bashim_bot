@@ -50,6 +50,7 @@ QUOTES_LIST = list()
 REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup([[KeyboardButton('Хочу цитату!')]], resize_keyboard=True)
 
 
+# SOURCE: https://github.com/gil9red/SimplePyScripts/blob/511a9fb408d8e8e470ce7f3ea4bcbf8d632e10a6/random_quote_bashim.py#L16
 def get_random_quotes_list():
     log.debug('get_random_quotes_list')
 
@@ -58,6 +59,10 @@ def get_random_quotes_list():
     try:
         with urlopen(Request(config.URL, headers={'User-Agent': config.USER_AGENT})) as f:
             root = BeautifulSoup(f.read(), 'html.parser')
+
+            # Remove comics
+            for x in root.select('.quote__strips'):
+                x.decompose()
 
             for quote_el in root.select('.quote'):
                 try:
