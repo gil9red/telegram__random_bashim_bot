@@ -4,12 +4,8 @@
 __author__ = 'ipetrash'
 
 
-# SOURCE: https://github.com/gil9red/SimplePyScripts/blob/3e645cee104703779d2a2aac8dd7ae5ba2821af2/html_parsing/random_quote_bash_im/bash_im.py
-
-
 import datetime as DT
 from dataclasses import dataclass, field
-from urllib.request import urlopen, Request
 from urllib.parse import urljoin
 from typing import List, Union
 import traceback
@@ -146,20 +142,20 @@ def get_random_quotes_list(logger=None) -> List[Quote]:
     quotes = []
 
     try:
-        with urlopen(Request(url, headers={'User-Agent': USER_AGENT})) as f:
-            root = BeautifulSoup(f.read(), 'html.parser')
+        rs = requests.get(url, headers={'User-Agent': USER_AGENT})
+        root = BeautifulSoup(rs.content, 'html.parser')
 
-            for quote_el in root.select('article.quote.quote'):
-                try:
-                    quotes.append(
-                        Quote.parse_from(quote_el)
-                    )
-                except Exception:
-                    msg = f'Error by parsing quote:\nquote_el:\n{quote_el}\n\n'
-                    if logger:
-                        logger.exception(msg)
-                    else:
-                        print(f'{msg}{traceback.format_exc()}')
+        for quote_el in root.select('article.quote'):
+            try:
+                quotes.append(
+                    Quote.parse_from(quote_el)
+                )
+            except Exception:
+                msg = f'Error by parsing quote:\nquote_el:\n{quote_el}\n\n'
+                if logger:
+                    logger.exception(msg)
+                else:
+                    print(f'{msg}{traceback.format_exc()}')
 
     except Exception:
         if logger:
