@@ -1,6 +1,6 @@
 # telegram__random_bashim_bot (#python3 #telegram #bot #bashim)
 
-[Бот](https://telegram.me/random_bashim_bot) телеграмма для получения случайных цитат http://bash.im/.
+[Бот](https://telegram.me/random_bashim_bot) телеграмма для получения случайных цитат https://bash.im/.
 
 Для получения цитаты достаточно послать любое сообщение и, для удобства, боту добавлена кнопка для получения цитат. 
 
