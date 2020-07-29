@@ -72,9 +72,9 @@ def get_random_quote() -> Quote:
 
 
 def get_html_message(quote: Quote) -> str:
-    link = f"""<a href="{quote.url}">#{quote.id}</a>"""
     text = html.escape(quote.text)
-    return f'{text}\n\n{quote.date_str} | {link}'
+    footer = f"""<a href="{quote.url}">{quote.date_str} | #{quote.id}</a>"""
+    return f'{text}\n\n{footer}'
 
 
 def error_callback(update: Update, context: CallbackContext):
