@@ -157,7 +157,7 @@ def on_callback_query(update: Update, context: CallbackContext):
     query.answer()
 
     context.bot.send_chat_action(
-        chat_id=update.message.chat_id, action=ChatAction.UPLOAD_PHOTO
+        chat_id=query.message.chat_id, action=ChatAction.UPLOAD_PHOTO
     )
 
     quote_id = query.data
