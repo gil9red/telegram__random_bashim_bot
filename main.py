@@ -13,7 +13,9 @@ from typing import List
 from pathlib import Path
 
 # pip install python-telegram-bot
-from telegram import ReplyKeyboardMarkup, Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import (
+    ReplyKeyboardMarkup, Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup, ChatAction
+)
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 from telegram.ext.dispatcher import run_async
 
@@ -153,6 +155,10 @@ def on_help(update: Update, context: CallbackContext):
 def on_callback_query(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
+
+    context.bot.send_chat_action(
+        chat_id=update.message.chat_id, action=ChatAction.UPLOAD_PHOTO
+    )
 
     quote_id = query.data
     files = Path(DIR_COMICS / f'quote_{quote_id}').glob('*.png')
