@@ -4,6 +4,7 @@
 __author__ = 'ipetrash'
 
 
+import functools
 import html
 import logging
 import sys
@@ -42,6 +43,24 @@ def get_logger():
 log = get_logger()
 
 
+def log_func(func):
+    @functools.wraps(func)
+    def decorator(*args, **kwargs):
+        update = args[0]
+        chat_id = None
+        user_id = None
+        if update.effective_chat:
+            chat_id = update.effective_chat.id
+        if update.effective_user:
+            user_id = update.effective_user.id
+
+        log.debug(func.__name__ + '[chat_id=%s, user_id=%s]', chat_id, user_id)
+
+        return func(*args, **kwargs)
+
+    return decorator
+
+
 # Хранилище цитат башорга, из которого будут браться цитаты, и посылаться в телеграм.
 # Когда этот список будет пустым, оно будет заполнено с сайта.
 QUOTES_LIST: List[Quote] = []
@@ -78,32 +97,16 @@ def get_html_message(quote: Quote) -> str:
     return f'{text}\n\n{footer}'
 
 
-def start(update: Update, context: CallbackContext):
-    # TODO: функция для получения из update chat и user
-    chat_id = None
-    user_id = None
-    if update.effective_chat:
-        chat_id = update.effective_chat.id
-    if update.effective_user:
-        user_id = update.effective_user.id
-    log.debug('start[chat_id=%s, user_id=%s]', chat_id, user_id)
-
+@log_func
+def on_start(update: Update, context: CallbackContext):
     update.message.reply_text(
         f'Все готово!\n' + TEXT_HELP,
         reply_markup=REPLY_KEYBOARD_MARKUP
     )
 
 
-def work(update: Update, context: CallbackContext):
-    # TODO: функция для получения из update chat и user
-    chat_id = None
-    user_id = None
-    if update.effective_chat:
-        chat_id = update.effective_chat.id
-    if update.effective_user:
-        user_id = update.effective_user.id
-    log.debug('work[chat_id=%s, user_id=%s]', chat_id, user_id)
-
+@log_func
+def on_work(update: Update, context: CallbackContext):
     quote = get_random_quote()
     if config.LOG_QUOTE_TEXT:
         log.debug('Quote text (%s):\n%s', quote.url, quote.text)
@@ -134,16 +137,8 @@ def work(update: Update, context: CallbackContext):
     quote.download_comics(DIR_COMICS / f'quote_{quote.id}')
 
 
-def help(update: Update, context: CallbackContext):
-    # TODO: функция для получения из update chat и user
-    chat_id = None
-    user_id = None
-    if update.effective_chat:
-        chat_id = update.effective_chat.id
-    if update.effective_user:
-        user_id = update.effective_user.id
-    log.debug('help[chat_id=%s, user_id=%s]', chat_id, user_id)
-
+@log_func
+def on_help(update: Update, context: CallbackContext):
     update.message.reply_text(
         TEXT_HELP, reply_markup=REPLY_KEYBOARD_MARKUP
     )
@@ -179,10 +174,10 @@ if __name__ == '__main__':
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler('start', start))
-    dp.add_handler(CommandHandler('more', work))
-    dp.add_handler(CommandHandler('help', help))
-    dp.add_handler(MessageHandler(Filters.text, work))
+    dp.add_handler(CommandHandler('start', on_start))
+    dp.add_handler(CommandHandler('more', on_work))
+    dp.add_handler(CommandHandler('help', on_help))
+    dp.add_handler(MessageHandler(Filters.text, on_work))
     dp.add_handler(CallbackQueryHandler(on_callback_query))
 
     # log all errors
