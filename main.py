@@ -8,10 +8,11 @@ import html
 import logging
 import sys
 from typing import List
+from pathlib import Path
 
 # pip install python-telegram-bot
-from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext
-from telegram import ReplyKeyboardMarkup, Update
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
+from telegram import ReplyKeyboardMarkup, Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup
 
 import config
 from bash_im import Quote, get_random_quotes_list
@@ -45,30 +46,30 @@ log = get_logger()
 # Когда этот список будет пустым, оно будет заполнено с сайта.
 QUOTES_LIST: List[Quote] = []
 
+TEXT_BUTTON_MORE = 'Хочу цитату!'
+TEXT_HELP = f'Для получения цитаты отправьте любое сообщение, ' \
+            f'или нажмите на кнопку "{TEXT_BUTTON_MORE}", ' \
+            f'или отправьте команду /more'
+
 REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
-    [['Хочу цитату!']], resize_keyboard=True
+    [[TEXT_BUTTON_MORE]], resize_keyboard=True
 )
+
+DIR_COMICS = Path(__file__).resolve().parent / 'comics'
+DIR_COMICS.mkdir(parents=True, exist_ok=True)
 
 
 def get_random_quote() -> Quote:
     log.debug('get_random_quote (QUOTES_LIST: %s)', len(QUOTES_LIST))
 
-    quote = None
+    # Если пустой, запрос и заполняем список новыми цитатами
+    if not QUOTES_LIST:
+        log.debug('QUOTES_LIST is empty, do new request.')
+        QUOTES_LIST.extend(get_random_quotes_list(log))
 
-    try:
-        # Если пустой, запрос и заполняем список новыми цитатами
-        if not QUOTES_LIST:
-            log.debug('QUOTES_LIST is empty, do new request.')
-            QUOTES_LIST.extend(get_random_quotes_list(log))
+        log.debug('New quotes: %s.', len(QUOTES_LIST))
 
-            log.debug('New quotes: %s.', len(QUOTES_LIST))
-
-        quote = QUOTES_LIST.pop()
-
-    except Exception as e:
-        log.exception(e)
-
-    return quote
+    return QUOTES_LIST.pop()
 
 
 def get_html_message(quote: Quote) -> str:
@@ -77,42 +78,96 @@ def get_html_message(quote: Quote) -> str:
     return f'{text}\n\n{footer}'
 
 
-def error_callback(update: Update, context: CallbackContext):
-    log.warning('Update "%s" caused error "%s"', update, context.error)
-
-
-# TODO: может с цитатой передавать дату и рейтинг?
-def work(update: Update, context: CallbackContext):
+def start(update: Update, context: CallbackContext):
+    # TODO: функция для получения из update chat и user
     chat_id = None
+    user_id = None
     if update.effective_chat:
         chat_id = update.effective_chat.id
-    elif update.effective_user:
-        chat_id = update.effective_user.id
+    if update.effective_user:
+        user_id = update.effective_user.id
+    log.debug('start[chat_id=%s, user_id=%s]', chat_id, user_id)
 
-    log.debug('work[chat_id=%s]', chat_id)
+    update.message.reply_text(
+        f'Все готово!\n' + TEXT_HELP,
+        reply_markup=REPLY_KEYBOARD_MARKUP
+    )
 
-    try:
-        quote = get_random_quote()
-        if config.LOG_QUOTE_TEXT:
-            log.debug('Quote text (%s):\n%s', quote.url, quote.text)
-        else:
-            log.debug('Quote text (%s)', quote.url)
 
-        if not quote:
-            log.warning("Don't receive quote...")
-            update.message.reply_text(config.ERROR_TEXT)
-            return
+def work(update: Update, context: CallbackContext):
+    # TODO: функция для получения из update chat и user
+    chat_id = None
+    user_id = None
+    if update.effective_chat:
+        chat_id = update.effective_chat.id
+    if update.effective_user:
+        user_id = update.effective_user.id
+    log.debug('work[chat_id=%s, user_id=%s]', chat_id, user_id)
 
-        # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
-        update.message.reply_html(
-            get_html_message(quote),
-            disable_web_page_preview=True,
-            reply_markup=REPLY_KEYBOARD_MARKUP
-        )
+    quote = get_random_quote()
+    if config.LOG_QUOTE_TEXT:
+        log.debug('Quote text (%s):\n%s', quote.url, quote.text)
+    else:
+        log.debug('Quote text (%s)', quote.url)
 
-    except Exception as e:
-        log.exception(e)
+    if not quote:
+        log.warning("Don't receive quote...")
         update.message.reply_text(config.ERROR_TEXT)
+        return
+
+    if quote.comics_url:
+        keyboard = [[InlineKeyboardButton("Комикс", callback_data=str(quote.id))]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+    else:
+        # Недостаточно при запуске отправить ReplyKeyboardMarkup, чтобы она всегда оставалась.
+        # Удаление сообщения, которое принесло клавиатуру, уберет ее.
+        # Поэтому при любой возможности, добавляем клавиатуру
+        reply_markup = REPLY_KEYBOARD_MARKUP
+
+    # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
+    update.message.reply_html(
+        get_html_message(quote),
+        disable_web_page_preview=True,
+        reply_markup=reply_markup
+    )
+
+    quote.download_comics(DIR_COMICS / f'quote_{quote.id}')
+
+
+def help(update: Update, context: CallbackContext):
+    # TODO: функция для получения из update chat и user
+    chat_id = None
+    user_id = None
+    if update.effective_chat:
+        chat_id = update.effective_chat.id
+    if update.effective_user:
+        user_id = update.effective_user.id
+    log.debug('help[chat_id=%s, user_id=%s]', chat_id, user_id)
+
+    update.message.reply_text(
+        TEXT_HELP, reply_markup=REPLY_KEYBOARD_MARKUP
+    )
+
+
+def on_callback_query(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    quote_id = query.data
+    files = Path(DIR_COMICS / f'quote_{quote_id}').glob('*.png')
+
+    media = [
+        InputMediaPhoto(f.open('rb')) for f in files
+    ]
+    query.message.reply_media_group(
+        media=media,
+        reply_to_message_id=query.message.message_id
+    )
+
+
+def error_callback(update: Update, context: CallbackContext):
+    log.exception('Error: %s\nUpdate: %s', context.error, update)
+    update.message.reply_text(config.ERROR_TEXT)
 
 
 if __name__ == '__main__':
@@ -124,8 +179,11 @@ if __name__ == '__main__':
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler('start', work))
+    dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('more', work))
+    dp.add_handler(CommandHandler('help', help))
     dp.add_handler(MessageHandler(Filters.text, work))
+    dp.add_handler(CallbackQueryHandler(on_callback_query))
 
     # log all errors
     dp.add_error_handler(error_callback)
