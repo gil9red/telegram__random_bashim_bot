@@ -8,12 +8,14 @@ import functools
 import html
 import logging
 import sys
+import os
 from typing import List
 from pathlib import Path
 
 # pip install python-telegram-bot
-from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 from telegram import ReplyKeyboardMarkup, Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
+from telegram.ext.dispatcher import run_async
 
 import config
 from bash_im import Quote, get_random_quotes_list
@@ -97,6 +99,7 @@ def get_html_message(quote: Quote) -> str:
     return f'{text}\n\n{footer}'
 
 
+@run_async
 @log_func
 def on_start(update: Update, context: CallbackContext):
     update.message.reply_text(
@@ -105,6 +108,7 @@ def on_start(update: Update, context: CallbackContext):
     )
 
 
+@run_async
 @log_func
 def on_work(update: Update, context: CallbackContext):
     quote = get_random_quote()
@@ -137,6 +141,7 @@ def on_work(update: Update, context: CallbackContext):
     quote.download_comics(DIR_COMICS / f'quote_{quote.id}')
 
 
+@run_async
 @log_func
 def on_help(update: Update, context: CallbackContext):
     update.message.reply_text(
@@ -144,6 +149,7 @@ def on_help(update: Update, context: CallbackContext):
     )
 
 
+@run_async
 def on_callback_query(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
@@ -166,10 +172,17 @@ def error_callback(update: Update, context: CallbackContext):
 
 
 if __name__ == '__main__':
-    log.debug('Start')
+    cpu_count = os.cpu_count()
+    workers = cpu_count
+
+    log.debug('Start. CPU_COUNT=%s, WORKERS=%s', cpu_count, workers)
 
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater(config.TOKEN, use_context=True)
+    updater = Updater(
+        config.TOKEN,
+        workers=workers,
+        use_context=True
+    )
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
