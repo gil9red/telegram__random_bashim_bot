@@ -174,8 +174,9 @@ def error_callback(update: Update, context: CallbackContext):
 if __name__ == '__main__':
     cpu_count = os.cpu_count()
     workers = cpu_count
+    log.debug('System: CPU_COUNT=%s, WORKERS=%s', cpu_count, workers)
 
-    log.debug('Start. CPU_COUNT=%s, WORKERS=%s', cpu_count, workers)
+    log.debug('Start')
 
     # Create the EventHandler and pass it your bot's token.
     updater = Updater(
