@@ -177,7 +177,7 @@ def error_callback(update: Update, context: CallbackContext):
     update.message.reply_text(config.ERROR_TEXT)
 
 
-if __name__ == '__main__':
+def main():
     cpu_count = os.cpu_count()
     workers = cpu_count
     log.debug('System: CPU_COUNT=%s, WORKERS=%s', cpu_count, workers)
@@ -212,3 +212,11 @@ if __name__ == '__main__':
     updater.idle()
 
     log.debug('Finish')
+
+
+if __name__ == '__main__':
+    while True:
+        try:
+            main()
+        except:
+            log.exception('')
