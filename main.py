@@ -113,7 +113,7 @@ def on_start(update: Update, context: CallbackContext):
 
 @run_async
 @log_func
-def on_work(update: Update, context: CallbackContext):
+def on_request(update: Update, context: CallbackContext):
     quote = get_random_quote()
     if config.LOG_QUOTE_TEXT:
         log.debug('Quote text (%s):\n%s', quote.url, quote.text)
@@ -196,9 +196,9 @@ def main():
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler('start', on_start))
-    dp.add_handler(CommandHandler('more', on_work))
+    dp.add_handler(CommandHandler('more', on_request))
     dp.add_handler(CommandHandler('help', on_help))
-    dp.add_handler(MessageHandler(Filters.text, on_work))
+    dp.add_handler(MessageHandler(Filters.text, on_request))
     dp.add_handler(CallbackQueryHandler(on_callback_query))
 
     # log all errors
