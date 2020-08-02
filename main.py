@@ -153,6 +153,7 @@ def on_help(update: Update, context: CallbackContext):
 
 
 @run_async
+@log_func
 def on_callback_query(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
