@@ -20,50 +20,12 @@ from telegram import (
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 from telegram.ext.dispatcher import run_async
 
-import config
 from bash_im import Quote, get_random_quotes_list
+import config
+from common import get_logger, log_func
 
 
-def get_logger():
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('[%(asctime)s] %(filename)s[LINE:%(lineno)d] %(levelname)-8s %(message)s')
-
-    fh = logging.FileHandler('log', encoding='utf-8')
-    fh.setLevel(logging.DEBUG)
-
-    ch = logging.StreamHandler(stream=sys.stdout)
-    ch.setLevel(logging.DEBUG)
-
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    log.addHandler(fh)
-    log.addHandler(ch)
-
-    return log
-
-
-log = get_logger()
-
-
-def log_func(func):
-    @functools.wraps(func)
-    def decorator(*args, **kwargs):
-        update = args[0]
-        chat_id = None
-        user_id = None
-        if update.effective_chat:
-            chat_id = update.effective_chat.id
-        if update.effective_user:
-            user_id = update.effective_user.id
-
-        log.debug(func.__name__ + '[chat_id=%s, user_id=%s]', chat_id, user_id)
-
-        return func(*args, **kwargs)
-
-    return decorator
+log = get_logger(__file__)
 
 
 # Хранилище цитат башорга, из которого будут браться цитаты, и посылаться в телеграм.
@@ -103,7 +65,7 @@ def get_html_message(quote: Quote) -> str:
 
 
 @run_async
-@log_func
+@log_func(log)
 def on_start(update: Update, context: CallbackContext):
     update.message.reply_text(
         f'Все готово!\n' + TEXT_HELP,
@@ -112,7 +74,7 @@ def on_start(update: Update, context: CallbackContext):
 
 
 @run_async
-@log_func
+@log_func(log)
 def on_request(update: Update, context: CallbackContext):
     quote = get_random_quote()
     if config.LOG_QUOTE_TEXT:
@@ -145,7 +107,7 @@ def on_request(update: Update, context: CallbackContext):
 
 
 @run_async
-@log_func
+@log_func(log)
 def on_help(update: Update, context: CallbackContext):
     update.message.reply_text(
         TEXT_HELP, reply_markup=REPLY_KEYBOARD_MARKUP
@@ -153,7 +115,7 @@ def on_help(update: Update, context: CallbackContext):
 
 
 @run_async
-@log_func
+@log_func(log)
 def on_callback_query(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
@@ -163,18 +125,21 @@ def on_callback_query(update: Update, context: CallbackContext):
     )
 
     quote_id = query.data
-    files = Path(DIR_COMICS / f'quote_{quote_id}').glob('*.png')
+    files = list(Path(DIR_COMICS / f'quote_{quote_id}').glob('*.png'))
+    max_parts = 10
 
-    media = [
-        InputMediaPhoto(f.open('rb')) for f in files
-    ]
-    query.message.reply_media_group(
-        media=media,
-        reply_to_message_id=query.message.message_id
-    )
+    for i in range(0, len(files), max_parts):
+        media = [
+            InputMediaPhoto(f.open('rb')) for f in files[i: i+max_parts]
+        ]
+
+        query.message.reply_media_group(
+            media=media,
+            reply_to_message_id=query.message.message_id
+        )
 
 
-def error_callback(update: Update, context: CallbackContext):
+def on_error(update: Update, context: CallbackContext):
     log.exception('Error: %s\nUpdate: %s', context.error, update)
     update.message.reply_text(config.ERROR_TEXT)
 
@@ -203,7 +168,7 @@ def main():
     dp.add_handler(CallbackQueryHandler(on_callback_query))
 
     # log all errors
-    dp.add_error_handler(error_callback)
+    dp.add_error_handler(on_error)
 
     # Start the Bot
     updater.start_polling()
