@@ -4,10 +4,7 @@
 __author__ = 'ipetrash'
 
 
-import functools
 import html
-import logging
-import sys
 import os
 import time
 from typing import List
