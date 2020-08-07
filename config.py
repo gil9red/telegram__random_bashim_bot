@@ -4,7 +4,10 @@
 __author__ = 'ipetrash'
 
 
-TOKEN = '<TOKEN>'
+import os
+
+
+TOKEN = os.environ.get('TOKEN') or open('TOKEN.txt', encoding='utf-8').read().strip()
 
 URL = 'https://bash.im/random'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
