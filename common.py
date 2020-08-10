@@ -43,14 +43,18 @@ def log_func(logger: logging.Logger):
             if args:
                 update = args[0]
                 if update:
-                    chat_id = None
-                    user_id = None
+                    chat_id = user_id = first_name = last_name = None
+
                     if update.effective_chat:
                         chat_id = update.effective_chat.id
+
                     if update.effective_user:
                         user_id = update.effective_user.id
+                        first_name = update.effective_user.first_name
+                        last_name = update.effective_user.last_name
 
-                    logger.debug(func.__name__ + '[chat_id=%s, user_id=%s]', chat_id, user_id)
+                    msg = f'[chat_id={chat_id}, user_id={user_id}, first_name={first_name!r}, last_name={last_name!r}]'
+                    logger.debug(func.__name__ + msg)
 
             return func(*args, **kwargs)
 
