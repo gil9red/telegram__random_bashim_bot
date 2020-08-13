@@ -100,7 +100,7 @@ def on_request(update: Update, context: CallbackContext):
         reply_markup=reply_markup
     )
 
-    quote.download_comics(DIR_COMICS / f'quote_{quote.id}')
+    quote.download_comics(DIR_COMICS)
 
 
 @run_async
@@ -122,7 +122,7 @@ def on_callback_query(update: Update, context: CallbackContext):
     )
 
     quote_id = query.data
-    files = list(Path(DIR_COMICS / f'quote_{quote_id}').glob('*.png'))
+    files = list(DIR_COMICS.glob(f'quote{quote_id}_*.png'))
     max_parts = 10
 
     for i in range(0, len(files), max_parts):
