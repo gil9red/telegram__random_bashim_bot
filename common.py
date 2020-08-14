@@ -6,6 +6,7 @@ __author__ = 'ipetrash'
 
 import functools
 import logging
+from timeit import default_timer
 import sys
 from pathlib import Path
 
@@ -40,6 +41,7 @@ def log_func(logger: logging.Logger):
     def actual_decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            msg = ''
             if args and args[0]:
                 update = args[0]
 
@@ -58,9 +60,13 @@ def log_func(logger: logging.Logger):
                 msg = f'[chat_id={chat_id}, user_id={user_id}, ' \
                       f'first_name={first_name!r}, last_name={last_name!r}, ' \
                       f'username={username!r}, language_code={language_code}]'
-                logger.debug(func.__name__ + msg)
 
-            return func(*args, **kwargs)
+            logger.debug(f'Start {func.__name__}{msg}')
+            t = default_timer()
+            result = func(*args, **kwargs)
+            logger.debug(f'Finish {func.__name__}. Elapsed {default_timer() - t:.2f} secs')
+
+            return result
 
         return wrapper
     return actual_decorator
