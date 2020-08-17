@@ -138,9 +138,6 @@ def main():
     workers = cpu_count
     log.debug('System: CPU_COUNT=%s, WORKERS=%s', cpu_count, workers)
 
-    thread = Thread(target=download_more_quotes, args=[log, DIR_COMICS])
-    thread.start()
-
     log.debug('Start')
 
     # Create the EventHandler and pass it your bot's token.
@@ -174,6 +171,9 @@ def main():
 
 
 if __name__ == '__main__':
+    thread = Thread(target=download_more_quotes, args=[log, DIR_COMICS])
+    thread.start()
+
     while True:
         try:
             main()
