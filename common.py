@@ -6,9 +6,13 @@ __author__ = 'ipetrash'
 
 import functools
 import logging
-from timeit import default_timer
+import time
 import sys
 from pathlib import Path
+from random import randint
+
+from bash_im import get_random_quotes_list
+import db
 
 
 def get_logger(file_name: str, dir_name='logs'):
@@ -62,11 +66,50 @@ def log_func(logger: logging.Logger):
                       f'username={username!r}, language_code={language_code}]'
 
             logger.debug(f'Start {func.__name__}{msg}')
-            t = default_timer()
+            t = time.perf_counter_ns()
             result = func(*args, **kwargs)
-            logger.debug(f'Finish {func.__name__}. Elapsed {default_timer() - t:.2f} secs')
+            logger.debug(f'Finish {func.__name__}. Elapsed {(time.perf_counter_ns() - t) // 1_000_000} ms')
 
             return result
 
         return wrapper
     return actual_decorator
+
+
+def download_more_quotes(log, dir_comics):
+    i = 0
+
+    while True:
+        try:
+            count = db.Quote.select().count()
+            log.debug('download_more_quotes, quotes: %s', count)
+            t = time.perf_counter_ns()
+
+            for quote in get_random_quotes_list(log):
+                db.Quote.get_from(quote)
+
+                # Сразу же пробуем скачать комиксы
+                quote.download_comics(dir_comics)
+
+            elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
+            log.debug('Added new quotes: %s, elapsed %s ms', db.Quote.select().count() - count, elapsed_ms)
+
+        except:
+            log.exception('')
+
+        finally:
+            # 3 - 15 minutes
+            minutes = randint(3, 15)
+            log.debug('Mini sleep: %s minutes', minutes)
+
+            time.sleep(minutes * 60)
+
+            i += 1
+            if i == 20:
+                i = 0
+
+                # 3 - 6 hours
+                minutes = randint(3 * 60, 6 * 60)
+                log.debug('Deep sleep: %s minutes', minutes)
+
+                time.sleep(minutes * 60)

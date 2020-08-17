@@ -13,8 +13,15 @@ TOKEN_FILE_NAME = DIR / 'TOKEN.txt'
 
 TOKEN = os.environ.get('TOKEN') or TOKEN_FILE_NAME.read_text('utf-8').strip()
 
+DIR_COMICS = DIR / 'comics'
+DIR_COMICS.mkdir(parents=True, exist_ok=True)
+
 URL = 'https://bash.im/random'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
 
 ERROR_TEXT = '⚠ Возникла какая-то проблема. Попробуйте повторить запрос или попробовать чуть позже...'
-LOG_QUOTE_TEXT = False
+
+TEXT_BUTTON_MORE = 'Хочу цитату!'
+TEXT_HELP = f'Для получения цитаты отправьте любое сообщение, ' \
+            f'или нажмите на кнопку "{TEXT_BUTTON_MORE}", ' \
+            f'или отправьте команду /more'

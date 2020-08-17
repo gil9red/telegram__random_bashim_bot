@@ -7,8 +7,8 @@ __author__ = 'ipetrash'
 import html
 import os
 import time
-from typing import List
-from pathlib import Path
+from threading import Thread
+from typing import Union
 
 # pip install python-telegram-bot
 from telegram import (
@@ -17,51 +17,46 @@ from telegram import (
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 from telegram.ext.dispatcher import run_async
 
-from bash_im import Quote, get_random_quotes_list
-import config
-from common import get_logger, log_func
+from bash_im import Quote
+from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS
+from common import get_logger, log_func, download_more_quotes
+import db
 
 
 log = get_logger(__file__)
 
 
-# Хранилище цитат башорга, из которого будут браться цитаты, и посылаться в телеграм.
-# Когда этот список будет пустым, оно будет заполнено с сайта.
-QUOTES_LIST: List[Quote] = []
-
-TEXT_BUTTON_MORE = 'Хочу цитату!'
-TEXT_HELP = f'Для получения цитаты отправьте любое сообщение, ' \
-            f'или нажмите на кнопку "{TEXT_BUTTON_MORE}", ' \
-            f'или отправьте команду /more'
-
 REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
     [[TEXT_BUTTON_MORE]], resize_keyboard=True
 )
 
-DIR_COMICS = Path(__file__).resolve().parent / 'comics'
-DIR_COMICS.mkdir(parents=True, exist_ok=True)
 
+def get_random_quote(update: Update, context: CallbackContext) -> db.Quote:
+    user_id = update.effective_user.id
 
-def get_random_quote() -> Quote:
-    log.debug('get_random_quote (QUOTES_LIST: %s)', len(QUOTES_LIST))
+    if 'quotes' not in context.user_data:
+        context.user_data['quotes'] = []
+
+    quotes = context.user_data['quotes']
+    log.debug('get_random_quote (quotes: %s)', len(quotes))
 
     # Если пустой, запрос и заполняем список новыми цитатами
-    if not QUOTES_LIST:
-        log.debug('QUOTES_LIST is empty, do new request.')
-        QUOTES_LIST.extend(get_random_quotes_list(log))
+    if not quotes:
+        log.debug('Quotes is empty, filling from database.')
+        quotes += db.Quote.get_user_unique_random(user_id)
+        log.debug('New quotes: %s.', len(quotes))
 
-        log.debug('New quotes: %s.', len(QUOTES_LIST))
-
-    return QUOTES_LIST.pop()
+    return quotes.pop()
 
 
-def get_html_message(quote: Quote) -> str:
+def get_html_message(quote: Union[Quote, db.Quote]) -> str:
     text = html.escape(quote.text)
     footer = f"""<a href="{quote.url}">{quote.date_str} | #{quote.id}</a>"""
     return f'{text}\n\n{footer}'
 
 
 @run_async
+@db.process_request
 @log_func(log)
 def on_start(update: Update, context: CallbackContext):
     update.message.reply_text(
@@ -71,20 +66,14 @@ def on_start(update: Update, context: CallbackContext):
 
 
 @run_async
+@db.process_request
 @log_func(log)
 def on_request(update: Update, context: CallbackContext):
-    quote = get_random_quote()
-    if config.LOG_QUOTE_TEXT:
-        log.debug('Quote text (%s):\n%s', quote.url, quote.text)
-    else:
-        log.debug('Quote text (%s)', quote.url)
+    quote = get_random_quote(update, context)
 
-    if not quote:
-        log.warning("Don't receive quote...")
-        update.message.reply_text(config.ERROR_TEXT)
-        return
+    log.debug('Quote text (%s)', quote.url)
 
-    if quote.comics_url:
+    if quote.has_comics():
         keyboard = [[InlineKeyboardButton("Комикс", callback_data=str(quote.id))]]
         reply_markup = InlineKeyboardMarkup(keyboard)
     else:
@@ -100,10 +89,11 @@ def on_request(update: Update, context: CallbackContext):
         reply_markup=reply_markup
     )
 
-    quote.download_comics(DIR_COMICS)
+    return quote
 
 
 @run_async
+@db.process_request
 @log_func(log)
 def on_help(update: Update, context: CallbackContext):
     update.message.reply_text(
@@ -112,6 +102,7 @@ def on_help(update: Update, context: CallbackContext):
 
 
 @run_async
+@db.process_request
 @log_func(log)
 def on_callback_query(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -139,7 +130,7 @@ def on_callback_query(update: Update, context: CallbackContext):
 def on_error(update: Update, context: CallbackContext):
     log.exception('Error: %s\nUpdate: %s', context.error, update)
     if update and update.message:
-        update.message.reply_text(config.ERROR_TEXT)
+        update.message.reply_text(ERROR_TEXT)
 
 
 def main():
@@ -147,11 +138,14 @@ def main():
     workers = cpu_count
     log.debug('System: CPU_COUNT=%s, WORKERS=%s', cpu_count, workers)
 
+    thread = Thread(target=download_more_quotes, args=[log, DIR_COMICS])
+    thread.start()
+
     log.debug('Start')
 
     # Create the EventHandler and pass it your bot's token.
     updater = Updater(
-        config.TOKEN,
+        TOKEN,
         workers=workers,
         use_context=True
     )
