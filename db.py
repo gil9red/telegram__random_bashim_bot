@@ -5,11 +5,10 @@ __author__ = 'ipetrash'
 
 
 import datetime as DT
-import functools
-import time
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Callable
 from pathlib import Path
 import shutil
+import traceback
 
 # pip install peewee
 from peewee import *
@@ -18,6 +17,7 @@ from playhouse.sqliteq import SqliteQueueDatabase
 import telegram
 
 import bash_im
+from bash_im import shorten
 from config import DIR
 
 
@@ -25,6 +25,12 @@ DB_DIR_NAME = DIR / 'database'
 DB_FILE_NAME = str(DB_DIR_NAME / 'database.sqlite')
 
 DB_DIR_NAME.mkdir(parents=True, exist_ok=True)
+
+
+DB_DIR_NAME_ERROR = DIR / 'database_error'
+DB_FILE_NAME_ERROR = str(DB_DIR_NAME_ERROR / 'database_error.sqlite')
+
+DB_DIR_NAME_ERROR.mkdir(parents=True, exist_ok=True)
 
 
 def db_create_backup(backup_dir='backup', date_fmt='%d%m%y'):
@@ -57,6 +63,20 @@ db = SqliteQueueDatabase(
 )
 
 
+db_error = SqliteQueueDatabase(
+    DB_FILE_NAME_ERROR,
+    pragmas={
+        'foreign_keys': 1,
+        'journal_mode': 'wal',    # WAL-mode
+        'cache_size': -1024 * 64  # 64MB page-cache
+    },
+    use_gevent=False,    # Use the standard library "threading" module.
+    autostart=True,
+    queue_max_size=64,   # Max. # of pending writes that can accumulate.
+    results_timeout=5.0  # Max. time to wait for query to be executed.
+)
+
+
 class BaseModel(Model):
     class Meta:
         database = db
@@ -65,9 +85,18 @@ class BaseModel(Model):
         fields = []
         for k, field in self._meta.fields.items():
             v = getattr(self, k)
-            fields.append(
-                f'{k}={repr(v) if isinstance(field, TextField) else v}'
-            )
+
+            if isinstance(field, TextField):
+                if v:
+                    v = repr(shorten(v))
+
+            elif isinstance(field, ForeignKeyField):
+                k = f'{k}_id'
+                if v:
+                    v = v.id
+
+            fields.append(f'{k}={v}')
+
         return self.__class__.__name__ + '(' + ', '.join(fields) + ')'
 
 
@@ -209,7 +238,7 @@ class Quote(BaseModel):
 
     def __str__(self):
         return self.__class__.__name__ + \
-               f'(id={self.id}, url={self.url!r}, text={bash_im.shorten(self.text)!r}, ' \
+               f'(id={self.id}, url={self.url!r}, text={shorten(self.text)!r}, ' \
                f'date={self.date}, rating={self.rating}, comics_number={len(self.get_comics())})'
 
 
@@ -233,54 +262,52 @@ class Request(BaseModel):
     chat = ForeignKeyField(Chat, null=True, backref='requests')
     quote = ForeignKeyField(Quote, null=True, backref='requests')
 
-    def __str__(self):
-        return self.__class__.__name__ + \
-               f'(func_name={self.func_name!r}, date_time={self.date_time}, elapsed_ms={self.elapsed_ms}, ' \
-               f'user_id={self.user.id if self.user else None}, ' \
-               f'chat_id={self.chat.id if self.chat else None}, ' \
-               f'quote_id={self.quote.id if self.quote else None})'
 
+class Error(BaseModel):
+    class Meta:
+        database = db_error
 
-def process_request(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        user = chat = quote = None
+    date_time = DateTimeField(default=DT.datetime.now)
+    func_name = TextField()
+    exception_class = TextField()
+    error_text = TextField()
+    stack_trace = TextField()
+    user_id = IntegerField(null=True)
+    chat_id = IntegerField(null=True)
+    message_id = IntegerField(null=True)
 
-        if args and args[0]:
-            update = args[0]
+    @classmethod
+    def create_from(cls, func: Union[Callable, str], e: Exception, update: telegram.Update = None) -> 'Error':
+        user_id = chat_id = message_id = None
+        if update:
+            if update.effective_user:
+                user_id = update.effective_user.id
 
-            user = User.get_from(update.effective_user)
-            if user:
-                user.update_last_activity()
+            if update.effective_chat:
+                chat_id = update.effective_chat.id
 
-            chat = Chat.get_from(update.effective_chat)
-            if chat:
-                chat.update_last_activity()
+            if update.message:
+                message_id = update.message.message_id
 
-        t = time.perf_counter_ns()
+        if isinstance(func, Callable):
+            func = func.__name__
 
-        result = func(*args, **kwargs)
-
-        elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
-
-        if isinstance(result, Quote):
-            quote = result
-
-        Request.create(
-            func_name=func.__name__,
-            elapsed_ms=elapsed_ms,
-            user=user,
-            chat=chat,
-            quote=quote
+        Error.create(
+            func_name=func,
+            exception_class=e.__class__.__name__,
+            error_text=str(e),
+            stack_trace=traceback.format_exc(),
+            user_id=user_id,
+            chat_id=chat_id,
+            message_id=message_id,
         )
-
-        return result
-
-    return wrapper
 
 
 db.connect()
 db.create_tables([User, Chat, Quote, Comics, Request])
+
+db_error.connect()
+db_error.create_tables([Error])
 
 
 if __name__ == '__main__':
@@ -339,3 +366,6 @@ if __name__ == '__main__':
     print(
         f'Quote #{quote_id} found in', [i for i, x in enumerate(items) if x == quote_id]
     )
+    print()
+
+    print('Last error:', Error.select().order_by(Error.id.desc()).first())

@@ -21,6 +21,7 @@ from bash_im import Quote
 from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS
 from common import get_logger, log_func, download_more_quotes
 import db
+from db_utils import process_request
 
 
 log = get_logger(__file__)
@@ -56,7 +57,7 @@ def get_html_message(quote: Union[Quote, db.Quote]) -> str:
 
 
 @run_async
-@db.process_request
+@process_request(log)
 @log_func(log)
 def on_start(update: Update, context: CallbackContext):
     update.message.reply_text(
@@ -66,7 +67,7 @@ def on_start(update: Update, context: CallbackContext):
 
 
 @run_async
-@db.process_request
+@process_request(log)
 @log_func(log)
 def on_request(update: Update, context: CallbackContext):
     quote = get_random_quote(update, context)
@@ -93,7 +94,7 @@ def on_request(update: Update, context: CallbackContext):
 
 
 @run_async
-@db.process_request
+@process_request(log)
 @log_func(log)
 def on_help(update: Update, context: CallbackContext):
     update.message.reply_text(
@@ -102,7 +103,7 @@ def on_help(update: Update, context: CallbackContext):
 
 
 @run_async
-@db.process_request
+@process_request(log)
 @log_func(log)
 def on_callback_query(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -129,6 +130,9 @@ def on_callback_query(update: Update, context: CallbackContext):
 
 def on_error(update: Update, context: CallbackContext):
     log.exception('Error: %s\nUpdate: %s', context.error, update)
+
+    db.Error.create_from(on_error, context.error, update)
+
     if update and update.message:
         update.message.reply_text(ERROR_TEXT)
 
@@ -177,8 +181,10 @@ if __name__ == '__main__':
     while True:
         try:
             main()
-        except:
+        except Exception as e:
             log.exception('')
+
+            db.Error.create_from(main, e)
 
             timeout = 15
             log.info(f'Restarting the bot after {timeout} seconds')
