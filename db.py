@@ -325,3 +325,19 @@ if __name__ == '__main__':
 
     print('Random quote:', Quote.get_random(limit=1)[0])
     print()
+
+    # Last {ignored_last_quotes} returned quote's
+    sub_query = (
+        Request
+        .select(Request.quote_id)
+        .where(
+            (Request.quote_id.is_null(False)) & (Request.user_id == first_user)
+        )
+        .order_by(Request.id.desc())
+    )
+    items = [x.quote_id for x in sub_query]
+    print(items)
+    quote_id = 429385
+    print(
+        f'Quote #{quote_id} found in', [i for i, x in enumerate(items) if x == quote_id]
+    )
