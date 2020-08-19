@@ -4,16 +4,22 @@
 __author__ = 'ipetrash'
 
 
+import datetime as DT
 import functools
 import logging
 import time
+from pathlib import Path
+import shutil
 
 # pip install python-telegram-bot
 from telegram import Update
 from telegram.ext import CallbackContext
 
+# pip install schedule
+import schedule
+
 import config
-from db import User, Chat, Quote, Request, Error
+from db import DB_DIR_NAME, User, Chat, Quote, Request, Error
 
 
 def process_request(logger: logging.Logger):
@@ -60,3 +66,33 @@ def process_request(logger: logging.Logger):
 
         return wrapper
     return actual_decorator
+
+
+def db_create_backup(logger: logging.Logger, backup_dir='backup', date_fmt='%d%m%y'):
+    backup_path = Path(backup_dir)
+    backup_path.mkdir(parents=True, exist_ok=True)
+
+    zip_name = DT.datetime.today().strftime(date_fmt)
+    zip_name = backup_path / zip_name
+
+    logger.debug(f'Doing create backup in: {zip_name}')
+
+    shutil.make_archive(
+        zip_name,
+        'zip',
+        DB_DIR_NAME
+    )
+
+
+def do_backup(logger: logging.Logger):
+    # Каждую неделю, в пятницу, в 02:00
+    schedule\
+        .every().week\
+        .friday.at("02:00")\
+        .do(
+            lambda: db_create_backup(logger)
+        )
+
+    while True:
+        schedule.run_pending()
+        time.sleep(60)

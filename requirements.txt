@@ -10,6 +10,7 @@ peewee==3.13.3
 pycparser==2.20
 python-telegram-bot==12.8
 requests==2.24.0
+schedule==0.6.0
 six==1.15.0
 soupsieve==2.0.1
 tornado==6.0.4

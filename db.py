@@ -6,8 +6,6 @@ __author__ = 'ipetrash'
 
 import datetime as DT
 from typing import List, Optional, Union, Callable
-from pathlib import Path
-import shutil
 import traceback
 
 # pip install peewee
@@ -31,20 +29,6 @@ DB_DIR_NAME_ERROR = DIR / 'database_error'
 DB_FILE_NAME_ERROR = str(DB_DIR_NAME_ERROR / 'database_error.sqlite')
 
 DB_DIR_NAME_ERROR.mkdir(parents=True, exist_ok=True)
-
-
-def db_create_backup(backup_dir='backup', date_fmt='%d%m%y'):
-    backup_path = Path(backup_dir)
-    backup_path.mkdir(parents=True, exist_ok=True)
-
-    zip_name = DT.datetime.today().strftime(date_fmt)
-    zip_name = backup_path / zip_name
-
-    shutil.make_archive(
-        zip_name,
-        'zip',
-        DB_DIR_NAME
-    )
 
 
 # This working with multithreading

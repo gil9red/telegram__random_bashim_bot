@@ -21,7 +21,7 @@ from bash_im import Quote
 from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS
 from common import get_logger, log_func, download_more_quotes
 import db
-from db_utils import process_request
+from db_utils import process_request, do_backup
 
 
 log = get_logger(__file__)
@@ -175,8 +175,11 @@ def main():
 
 
 if __name__ == '__main__':
-    thread = Thread(target=download_more_quotes, args=[log, DIR_COMICS])
-    thread.start()
+    thread_download = Thread(target=download_more_quotes, args=[log, DIR_COMICS])
+    thread_download.start()
+
+    thread_backup = Thread(target=do_backup, args=[log])
+    thread_backup.start()
 
     while True:
         try:
