@@ -17,7 +17,7 @@ from telegram import (
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 from telegram.ext.dispatcher import run_async
 
-from bash_im import Quote
+from third_party.bash_im import Quote
 from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS
 from common import get_logger, log_func, download_more_quotes
 import db

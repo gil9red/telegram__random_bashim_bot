@@ -14,8 +14,8 @@ from playhouse.sqliteq import SqliteQueueDatabase
 
 import telegram
 
-import bash_im
-from bash_im import shorten
+from third_party import bash_im
+from third_party.bash_im import shorten
 from config import DIR
 
 

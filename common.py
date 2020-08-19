@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from random import randint
 
-from bash_im import get_random_quotes_list
+from third_party.bash_im import get_random_quotes_list
 import db
 
 
