@@ -22,40 +22,46 @@ import config
 from db import DB_DIR_NAME, User, Chat, Quote, Request, Error
 
 
-def process_request(logger: logging.Logger):
+def process_request(func):
+    @functools.wraps(func)
+    def wrapper(update: Update, context: CallbackContext):
+        user = chat = quote = None
+        if update:
+            user = User.get_from(update.effective_user)
+            if user:
+                user.update_last_activity()
+
+            chat = Chat.get_from(update.effective_chat)
+            if chat:
+                chat.update_last_activity()
+
+        t = time.perf_counter_ns()
+
+        result = func(update, context)
+
+        elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
+
+        if isinstance(result, Quote):
+            quote = result
+
+        Request.create(
+            func_name=func.__name__,
+            elapsed_ms=elapsed_ms,
+            user=user,
+            chat=chat,
+            quote=quote
+        )
+
+        return result
+    return wrapper
+
+
+def catch_error(logger: logging.Logger):
     def actual_decorator(func):
         @functools.wraps(func)
         def wrapper(update: Update, context: CallbackContext):
             try:
-                user = chat = quote = None
-                if update:
-                    user = User.get_from(update.effective_user)
-                    if user:
-                        user.update_last_activity()
-
-                    chat = Chat.get_from(update.effective_chat)
-                    if chat:
-                        chat.update_last_activity()
-
-                t = time.perf_counter_ns()
-
-                result = func(update, context)
-
-                elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
-
-                if isinstance(result, Quote):
-                    quote = result
-
-                Request.create(
-                    func_name=func.__name__,
-                    elapsed_ms=elapsed_ms,
-                    user=user,
-                    chat=chat,
-                    quote=quote
-                )
-
-                return result
-
+                return func(update, context)
             except Exception as e:
                 logger.exception('Error: %s\nUpdate: %s', context.error, update)
 

@@ -21,7 +21,7 @@ from third_party.bash_im import Quote
 from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS
 from common import get_logger, log_func, download_more_quotes
 import db
-from db_utils import process_request, do_backup
+from db_utils import process_request, catch_error, do_backup
 
 
 log = get_logger(__file__)
@@ -57,7 +57,8 @@ def get_html_message(quote: Union[Quote, db.Quote]) -> str:
 
 
 @run_async
-@process_request(log)
+@catch_error(log)
+@process_request
 @log_func(log)
 def on_start(update: Update, context: CallbackContext):
     update.message.reply_text(
@@ -67,7 +68,8 @@ def on_start(update: Update, context: CallbackContext):
 
 
 @run_async
-@process_request(log)
+@catch_error(log)
+@process_request
 @log_func(log)
 def on_request(update: Update, context: CallbackContext):
     quote = get_random_quote(update, context)
@@ -94,7 +96,8 @@ def on_request(update: Update, context: CallbackContext):
 
 
 @run_async
-@process_request(log)
+@catch_error(log)
+@process_request
 @log_func(log)
 def on_help(update: Update, context: CallbackContext):
     update.message.reply_text(
@@ -103,7 +106,8 @@ def on_help(update: Update, context: CallbackContext):
 
 
 @run_async
-@process_request(log)
+@catch_error(log)
+@process_request
 @log_func(log)
 def on_callback_query(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -128,6 +132,7 @@ def on_callback_query(update: Update, context: CallbackContext):
         )
 
 
+@catch_error(log)
 def on_error(update: Update, context: CallbackContext):
     log.exception('Error: %s\nUpdate: %s', context.error, update)
 
