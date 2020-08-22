@@ -10,6 +10,7 @@ import traceback
 
 # pip install peewee
 from peewee import *
+import peewee
 from playhouse.sqliteq import SqliteQueueDatabase
 
 import telegram
@@ -203,15 +204,8 @@ class Quote(BaseModel):
     @classmethod
     def get_user_unique_random(cls, user_id: Union[int, User], limit=20, ignored_last_quotes=300) -> List['Quote']:
         # Last {ignored_last_quotes} returned quote's
-        sub_query = (
-            Request
-            .select(Request.quote_id)
-            .where(
-                (Request.quote_id.is_null(False)) & (Request.user_id == user_id)
-            )
-            .order_by(Request.id.desc())
-            .limit(ignored_last_quotes)
-        )
+        sub_query = Request.get_all_by_user(user_id, ignored_last_quotes)
+
         query = (
             Quote.select()
             .where(Quote.id.not_in(sub_query))
@@ -245,6 +239,21 @@ class Request(BaseModel):
     user = ForeignKeyField(User, null=True, backref='requests')
     chat = ForeignKeyField(Chat, null=True, backref='requests')
     quote = ForeignKeyField(Quote, null=True, backref='requests')
+
+    @classmethod
+    def get_all_by_user(cls, user_id: Union[int, User], ignored_last_quotes=-1) -> peewee.Query:
+        query = (
+            Request
+            .select(Request.quote_id)
+            .where(
+                (Request.quote_id.is_null(False)) & (Request.user_id == user_id)
+            )
+            .order_by(Request.id.desc())
+        )
+        if ignored_last_quotes > 0:
+            query = query.limit(ignored_last_quotes)
+
+        return query
 
 
 class Error(BaseModel):
@@ -337,14 +346,7 @@ if __name__ == '__main__':
     print('Random quote:', Quote.get_random(limit=1)[0])
     print()
 
-    sub_query = (
-        Request
-        .select(Request.quote_id)
-        .where(
-            (Request.quote_id.is_null(False)) & (Request.user_id == first_user)
-        )
-        .order_by(Request.id.desc())
-    )
+    sub_query = Request.get_all_by_user(first_user)
     items = [x.quote_id for x in sub_query]
     quote_id = 429385
     print(

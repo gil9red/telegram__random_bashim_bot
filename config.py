@@ -13,6 +13,8 @@ TOKEN_FILE_NAME = DIR / 'TOKEN.txt'
 
 TOKEN = os.environ.get('TOKEN') or TOKEN_FILE_NAME.read_text('utf-8').strip()
 
+ADMIN_USERNAME = '@ilya_petrash'
+
 DIR_COMICS = DIR / 'comics'
 DIR_COMICS.mkdir(parents=True, exist_ok=True)
 

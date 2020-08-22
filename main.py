@@ -18,7 +18,7 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, Callb
 from telegram.ext.dispatcher import run_async
 
 from third_party.bash_im import Quote
-from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS
+from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS, ADMIN_USERNAME
 from common import get_logger, log_func, download_more_quotes
 import db
 from db_utils import process_request, catch_error, do_backup
@@ -99,6 +99,22 @@ def on_request(update: Update, context: CallbackContext):
 @catch_error(log)
 @process_request
 @log_func(log)
+def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    quote_id = int(context.match.group(1))
+
+    sub_query = db.Request.get_all_by_user(user_id)
+    items = [i for i, x in enumerate(sub_query) if x.quote_id == quote_id]
+    text = f'Цитата #{quote_id} найдена в {items}'
+
+    message = update.message or update.edited_message
+    message.reply_text(text)
+
+
+@run_async
+@catch_error(log)
+@process_request
+@log_func(log)
 def on_help(update: Update, context: CallbackContext):
     update.message.reply_text(
         TEXT_HELP, reply_markup=REPLY_KEYBOARD_MARKUP
@@ -162,6 +178,15 @@ def main():
     dp.add_handler(CommandHandler('start', on_start))
     dp.add_handler(CommandHandler('more', on_request))
     dp.add_handler(CommandHandler('help', on_help))
+
+    # Возвращение порядка вызова указанной цитаты у текущего юзера, сортировка от конца
+    dp.add_handler(
+        MessageHandler(
+            Filters.user(username=ADMIN_USERNAME) & Filters.regex(r'(?i)get used quote (\d+)'),
+            on_get_used_quote_in_requests
+        )
+    )
+
     dp.add_handler(MessageHandler(Filters.text, on_request))
     dp.add_handler(CallbackQueryHandler(on_callback_query))
 
