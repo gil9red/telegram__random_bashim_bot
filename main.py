@@ -86,7 +86,8 @@ def on_request(update: Update, context: CallbackContext):
         reply_markup = REPLY_KEYBOARD_MARKUP
 
     # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
-    update.message.reply_html(
+    message = update.message or update.edited_message
+    message.reply_html(
         get_html_message(quote),
         disable_web_page_preview=True,
         reply_markup=reply_markup
@@ -154,8 +155,9 @@ def on_error(update: Update, context: CallbackContext):
 
     db.Error.create_from(on_error, context.error, update)
 
-    if update and update.message:
-        update.message.reply_text(ERROR_TEXT)
+    if update:
+        message = update.message or update.edited_message
+        message.reply_text(ERROR_TEXT)
 
 
 def main():
