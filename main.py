@@ -104,12 +104,35 @@ def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     quote_id = int(context.match.group(1))
 
-    sub_query = db.Request.get_all_by_user(user_id)
+    sub_query = db.Request.get_all_quote_id_by_user(user_id)
     items = [i for i, x in enumerate(sub_query) if x.quote_id == quote_id]
     text = f'Цитата #{quote_id} найдена в {items}'
 
     message = update.message or update.edited_message
     message.reply_text(text)
+
+
+@run_async
+@catch_error(log)
+@process_request
+@log_func(log)
+def on_get_user_stats(update: Update, context: CallbackContext):
+    user = db.User.get_from(update.effective_user)
+
+    first_request = user.requests.first()
+    last_request = user.requests.order_by(db.Request.id.desc()).first()
+    elapsed_days = (last_request.date_time - first_request.date_time).days
+
+    text = f'''\
+<b>Статистика:</b>
+    Было получено цитат: {user.get_total_quotes()}
+    Среди них с комиксами: {user.get_total_quotes(with_comics=True)}
+    Всего запросов боту: {user.requests.count()}
+    Разница между первым и последним запросом: {elapsed_days} (дней)
+    '''
+
+    message = update.message or update.edited_message
+    message.reply_html(text)
 
 
 @run_async
@@ -181,10 +204,19 @@ def main():
     dp.add_handler(CommandHandler('more', on_request))
     dp.add_handler(CommandHandler('help', on_help))
 
+    # Возвращение статистики текущего пользователя
+    dp.add_handler(CommandHandler('stats', on_get_user_stats))
+    dp.add_handler(
+        MessageHandler(
+            Filters.regex(r'(?i)^stats$|^статистика$'),
+            on_get_user_stats
+        )
+    )
+
     # Возвращение порядка вызова указанной цитаты у текущего юзера, сортировка от конца
     dp.add_handler(
         MessageHandler(
-            Filters.user(username=ADMIN_USERNAME) & Filters.regex(r'(?i)get used quote (\d+)'),
+            Filters.user(username=ADMIN_USERNAME) & Filters.regex(r'(?i)^get used quote (\d+)$'),
             on_get_used_quote_in_requests
         )
     )

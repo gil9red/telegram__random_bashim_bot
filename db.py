@@ -113,6 +113,20 @@ class User(BaseModel):
             )
         return user_db
 
+    def get_total_quotes(self, with_comics=False) -> int:
+        query = Request.get_all_quote_id_by_user(self.id)
+        if not with_comics:
+            return query.count()
+
+        return (
+            Quote
+            .select(Quote)
+            .where(Quote.id.in_(query))
+            .join(Comics, JOIN.LEFT_OUTER)
+            .group_by(Quote)
+            .having(fn.COUNT(Comics.id) > 0)
+        ).count()
+
 
 # SOURCE: https://core.telegram.org/bots/api#chat
 class Chat(BaseModel):
@@ -204,7 +218,7 @@ class Quote(BaseModel):
     @classmethod
     def get_user_unique_random(cls, user_id: Union[int, User], limit=20, ignored_last_quotes=300) -> List['Quote']:
         # Last {ignored_last_quotes} returned quote's
-        sub_query = Request.get_all_by_user(user_id, ignored_last_quotes)
+        sub_query = Request.get_all_quote_id_by_user(user_id, ignored_last_quotes)
 
         query = (
             Quote.select()
@@ -241,7 +255,7 @@ class Request(BaseModel):
     quote = ForeignKeyField(Quote, null=True, backref='requests')
 
     @classmethod
-    def get_all_by_user(cls, user_id: Union[int, User], ignored_last_quotes=-1) -> peewee.Query:
+    def get_all_quote_id_by_user(cls, user_id: Union[int, User], ignored_last_quotes=-1) -> peewee.ModelSelect:
         query = (
             Request
             .select(Request.quote_id)
@@ -346,7 +360,7 @@ if __name__ == '__main__':
     print('Random quote:', Quote.get_random(limit=1)[0])
     print()
 
-    sub_query = Request.get_all_by_user(first_user)
+    sub_query = Request.get_all_quote_id_by_user(first_user)
     items = [x.quote_id for x in sub_query]
     quote_id = 429385
     print(
