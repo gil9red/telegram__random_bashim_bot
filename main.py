@@ -234,7 +234,7 @@ def main():
     dp.add_handler(CommandHandler('admin_stats', on_get_admin_stats, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^admin_stats$|^статистика админа$'),
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^admin[ _]stats$|^статистика[ _]админа$'),
             on_get_admin_stats
         )
     )
