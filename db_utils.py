@@ -18,7 +18,7 @@ from telegram.ext import CallbackContext
 # pip install schedule
 import schedule
 
-import config
+from config import ERROR_TEXT
 from db import DB_DIR_NAME, User, Chat, Quote, Request, Error
 
 
@@ -69,7 +69,7 @@ def catch_error(logger: logging.Logger):
 
                 if update:
                     message = update.message or update.edited_message
-                    message.reply_text(config.ERROR_TEXT)
+                    message.reply_text(ERROR_TEXT)
 
         return wrapper
     return actual_decorator
