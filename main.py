@@ -26,10 +26,10 @@ from db_utils import process_request, catch_error, do_backup
 
 log = get_logger(__file__)
 
-
 REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
     [[TEXT_BUTTON_MORE]], resize_keyboard=True
 )
+FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
 
 
 def get_random_quote(update: Update, context: CallbackContext) -> db.Quote:
@@ -139,6 +139,23 @@ def on_get_user_stats(update: Update, context: CallbackContext):
 @catch_error(log)
 @process_request
 @log_func(log)
+def on_get_admin_stats(update: Update, context: CallbackContext):
+    text = f'''\
+<b>Статистика админа:</b>
+    Пользователей: {db.User.select().count()}
+    Цитат: {db.Quote.select().count()}
+    Среди них с комиксами: {db.Quote.get_all_with_comics().count()}
+    Запросов: {db.Request.select().count()}
+    '''
+
+    message = update.message or update.edited_message
+    message.reply_html(text)
+
+
+@run_async
+@catch_error(log)
+@process_request
+@log_func(log)
 def on_help(update: Update, context: CallbackContext):
     update.message.reply_text(
         TEXT_HELP, reply_markup=REPLY_KEYBOARD_MARKUP
@@ -213,10 +230,19 @@ def main():
         )
     )
 
+    # Возвращение статистики админа
+    dp.add_handler(CommandHandler('admin_stats', on_get_admin_stats, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^admin_stats$|^статистика админа$'),
+            on_get_admin_stats
+        )
+    )
+
     # Возвращение порядка вызова указанной цитаты у текущего юзера, сортировка от конца
     dp.add_handler(
         MessageHandler(
-            Filters.user(username=ADMIN_USERNAME) & Filters.regex(r'(?i)^get used quote (\d+)$'),
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get used quote (\d+)$'),
             on_get_used_quote_in_requests
         )
     )

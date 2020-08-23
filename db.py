@@ -118,13 +118,8 @@ class User(BaseModel):
         if not with_comics:
             return query.count()
 
-        return (
-            Quote
-            .select(Quote)
-            .where(Quote.id.in_(query))
-            .join(Comics, JOIN.LEFT_OUTER)
-            .group_by(Quote)
-            .having(fn.COUNT(Comics.id) > 0)
+        return Quote.get_all_with_comics(
+            where=Quote.id.in_(query)
         ).count()
 
 
@@ -221,12 +216,23 @@ class Quote(BaseModel):
         sub_query = Request.get_all_quote_id_by_user(user_id, ignored_last_quotes)
 
         query = (
-            Quote.select()
-            .where(Quote.id.not_in(sub_query))
+            cls.select()
+            .where(cls.id.not_in(sub_query))
             .order_by(fn.Random())
             .limit(limit)
         )
         return list(query)
+
+    @classmethod
+    def get_all_with_comics(cls, where: peewee.ModelSelect = None) -> peewee.ModelSelect:
+        query = cls.select()
+        if where:
+            query = query.where(where)
+
+        return query\
+            .join(Comics, JOIN.LEFT_OUTER)\
+            .group_by(cls)\
+            .having(fn.COUNT(Comics.id) > 0)
 
     def __str__(self):
         return self.__class__.__name__ + \
@@ -347,14 +353,8 @@ if __name__ == '__main__':
     print()
 
     # Quotes with comics
-    query = (
-        Quote
-        .select(Quote)
-        .join(Comics, JOIN.LEFT_OUTER)
-        .group_by(Quote)
-        .having(fn.COUNT(Comics.id) > 0)
-    )
-    print('Total quotes having comics:', query.count())
+    print('Total quotes having comics of first user:', first_user.get_total_quotes(with_comics=True))
+    print('Total quotes having comics:', Quote.get_all_with_comics().count())
     print()
 
     print('Random quote:', Quote.get_random(limit=1)[0])
