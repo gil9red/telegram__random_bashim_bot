@@ -125,7 +125,7 @@ def on_get_user_stats(update: Update, context: CallbackContext):
 
     text = f'''\
 <b>Статистика:</b>
-    Было получено цитат: {user.get_total_quotes()}
+    Получено цитат: {user.get_total_quotes()}
     Среди них с комиксами: {user.get_total_quotes(with_comics=True)}
     Всего запросов боту: {user.requests.count()}
     Разница между первым и последним запросом: {elapsed_days} (дней)
