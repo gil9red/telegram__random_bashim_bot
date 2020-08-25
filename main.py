@@ -122,7 +122,6 @@ def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
     items = [i for i, x in enumerate(sub_query) if x.quote_id == quote_id]
     text = f'Цитата #{quote_id} найдена в {items}'
 
-
     message.reply_text(text)
 
 
@@ -142,7 +141,7 @@ def on_get_user_stats(update: Update, context: CallbackContext):
     Получено цитат: {user.get_total_quotes()}
     Среди них с комиксами: {user.get_total_quotes(with_comics=True)}
     Всего запросов боту: {user.requests.count()}
-    Разница между первым и последним запросом: {elapsed_days} (дней)
+    Разница между первым и последним запросом: {elapsed_days} дней
     '''
 
     message = update.message or update.edited_message
