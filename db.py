@@ -5,6 +5,7 @@ __author__ = 'ipetrash'
 
 
 import datetime as DT
+import time
 from typing import List, Optional, Union, Callable
 import traceback
 
@@ -342,9 +343,18 @@ if __name__ == '__main__':
     print('Total quotes:', Quote.select().count())
     print()
 
-    print("User's unique random quotes:")
-    for quote in Quote.get_user_unique_random(first_user, limit=3):
+    limit = 3
+    print(f"User's unique random quotes ({limit}):")
+    for quote in Quote.get_user_unique_random(first_user, limit=limit):
         print(f'    {quote}')
+
+    print()
+
+    print('Quote.get_user_unique_random performance stats:')
+    for limit in [100, 300, 500, 1000, 1500, 2000, 3000, 5000, 9999]:
+        t = time.perf_counter()
+        Quote.get_user_unique_random(first_user, limit=limit)
+        print(f'    limit={limit:<4} elapsed {time.perf_counter() - t:.2f} secs')
 
     print()
 
