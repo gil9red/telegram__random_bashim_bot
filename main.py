@@ -101,14 +101,28 @@ def on_request(update: Update, context: CallbackContext):
 @process_request
 @log_func(log)
 def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
+    message = update.message or update.edited_message
+
+    quote_id = None
+    try:
+        if context.match:
+            quote_id = int(context.match.group(1))
+        else:
+            quote_id = int(context.args[0])
+    except:
+        pass
+
+    if not quote_id:
+        message.reply_text('Номер цитаты не указан.')
+        return
+
     user_id = update.effective_user.id
-    quote_id = int(context.match.group(1))
 
     sub_query = db.Request.get_all_quote_id_by_user(user_id)
     items = [i for i, x in enumerate(sub_query) if x.quote_id == quote_id]
     text = f'Цитата #{quote_id} найдена в {items}'
 
-    message = update.message or update.edited_message
+
     message.reply_text(text)
 
 
@@ -240,6 +254,7 @@ def main():
     )
 
     # Возвращение порядка вызова указанной цитаты у текущего юзера, сортировка от конца
+    dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^get used quote (\d+)$'),
