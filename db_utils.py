@@ -75,6 +75,17 @@ def catch_error(logger: logging.Logger):
     return actual_decorator
 
 
+def get_user_message_repr(user: User) -> str:
+    return f'''
+    id: {user.id}
+    first_name: {user.first_name}
+    last_name: {user.last_name}
+    username: {user.username}
+    language_code: {user.language_code}
+    last_activity: {user.last_activity}
+    '''.rstrip()
+
+
 def db_create_backup(logger: logging.Logger, backup_dir='backup', date_fmt='%d%m%y'):
     backup_path = Path(backup_dir)
     backup_path.mkdir(parents=True, exist_ok=True)

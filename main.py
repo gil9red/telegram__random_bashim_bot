@@ -21,7 +21,7 @@ from third_party.bash_im import Quote
 from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS, ADMIN_USERNAME
 from common import get_logger, log_func, download_more_quotes
 import db
-from db_utils import process_request, catch_error, do_backup
+from db_utils import process_request, get_user_message_repr, catch_error, do_backup
 
 
 log = get_logger(__file__)
@@ -169,6 +169,30 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
 @catch_error(log)
 @process_request
 @log_func(log)
+def on_get_users(update: Update, context: CallbackContext):
+    message = update.message or update.edited_message
+
+    try:
+        if context.match and context.match.groups():
+            limit = int(context.match.group(1))
+        else:
+            limit = int(context.args[0])
+    except:
+        limit = 10
+
+    items = []
+    for user in db.User.select().limit(limit):
+        items.append(get_user_message_repr(user))
+
+    text = 'Users:\n' + ('\n' + '_' * 20 + '\n').join(items)
+
+    message.reply_text(text)
+
+
+@run_async
+@catch_error(log)
+@process_request
+@log_func(log)
 def on_help(update: Update, context: CallbackContext):
     update.message.reply_text(
         TEXT_HELP, reply_markup=REPLY_KEYBOARD_MARKUP
@@ -258,6 +282,14 @@ def main():
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^get used quote (\d+)$'),
             on_get_used_quote_in_requests
+        )
+    )
+
+    dp.add_handler(CommandHandler('get_users', on_get_users, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get users (\d+)$') | Filters.regex(r'(?i)^get users$')),
+            on_get_users
         )
     )
 
