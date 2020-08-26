@@ -25,15 +25,18 @@ from db import DB_DIR_NAME, User, Chat, Quote, Request, Error
 def process_request(func):
     @functools.wraps(func)
     def wrapper(update: Update, context: CallbackContext):
-        user = chat = quote = None
+        user_db = chat_db = quote_db = None
         if update:
-            user = User.get_from(update.effective_user)
-            if user:
-                user.update_last_activity()
+            user = update.effective_user
+            chat = update.effective_chat
 
-            chat = Chat.get_from(update.effective_chat)
-            if chat:
-                chat.update_last_activity()
+            user_db = User.get_from(user)
+            if user_db:
+                user_db.actualize(user)
+
+            chat_db = Chat.get_from(chat)
+            if chat_db:
+                chat_db.actualize(chat)
 
         t = time.perf_counter_ns()
 
@@ -42,14 +45,14 @@ def process_request(func):
         elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
 
         if isinstance(result, Quote):
-            quote = result
+            quote_db = result
 
         Request.create(
             func_name=func.__name__,
             elapsed_ms=elapsed_ms,
-            user=user,
-            chat=chat,
-            quote=quote
+            user=user_db,
+            chat=chat_db,
+            quote=quote_db
         )
 
         return result

@@ -94,8 +94,13 @@ class User(BaseModel):
     language_code = TextField(null=True)
     last_activity = DateTimeField(default=DT.datetime.now)
 
-    def update_last_activity(self):
+    def actualize(self, user: Optional[telegram.User]):
+        self.first_name = user.first_name
+        self.last_name = user.last_name
+        self.username = user.username
+        self.language_code = user.language_code
         self.last_activity = DT.datetime.now()
+
         self.save()
 
     @classmethod
@@ -134,8 +139,15 @@ class Chat(BaseModel):
     description = TextField(null=True)
     last_activity = DateTimeField(default=DT.datetime.now)
 
-    def update_last_activity(self):
+    def actualize(self, chat: Optional[telegram.Chat]):
+        self.type = chat.type
+        self.title = chat.title
+        self.username = chat.username
+        self.first_name = chat.first_name
+        self.last_name = chat.last_name
+        self.description = chat.description
         self.last_activity = DT.datetime.now()
+
         self.save()
 
     @classmethod
