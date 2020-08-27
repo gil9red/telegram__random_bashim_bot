@@ -19,7 +19,7 @@ from telegram.ext.dispatcher import run_async
 
 from third_party.bash_im import Quote
 from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS, ADMIN_USERNAME
-from common import get_logger, log_func, download_more_quotes
+from common import get_logger, log_func, download_random_quotes
 import db
 from db_utils import process_request, get_user_message_repr, catch_error, do_backup
 
@@ -311,7 +311,7 @@ def main():
 
 
 if __name__ == '__main__':
-    thread_download = Thread(target=download_more_quotes, args=[log, DIR_COMICS])
+    thread_download = Thread(target=download_random_quotes, args=[log, DIR_COMICS])
     thread_download.start()
 
     thread_backup = Thread(target=do_backup, args=[log])

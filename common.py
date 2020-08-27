@@ -76,13 +76,13 @@ def log_func(logger: logging.Logger):
     return actual_decorator
 
 
-def download_more_quotes(log, dir_comics):
+def download_random_quotes(log, dir_comics):
     i = 0
 
     while True:
         try:
             count = db.Quote.select().count()
-            log.debug('download_more_quotes, quotes: %s', count)
+            log.debug(f'{download_random_quotes.__name__}. Now quotes: {count}')
             t = time.perf_counter_ns()
 
             for quote in get_random_quotes_list(log):
