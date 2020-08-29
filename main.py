@@ -284,6 +284,12 @@ def main():
             on_get_used_quote_in_requests
         )
     )
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'^(\d+)$'),
+            on_get_used_quote_in_requests
+        )
+    )
 
     dp.add_handler(CommandHandler('get_users', on_get_users, FILTER_BY_ADMIN))
     dp.add_handler(
