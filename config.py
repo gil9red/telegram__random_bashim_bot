@@ -27,3 +27,5 @@ TEXT_BUTTON_MORE = 'Хочу цитату!'
 TEXT_HELP = f'Для получения цитаты отправьте любое сообщение, ' \
             f'или нажмите на кнопку "{TEXT_BUTTON_MORE}", ' \
             f'или отправьте команду /more'
+
+IGNORED_LAST_QUOTES = 1500

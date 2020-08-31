@@ -18,7 +18,7 @@ import telegram
 
 from third_party import bash_im
 from third_party.bash_im import shorten
-from config import DIR
+from config import DIR, IGNORED_LAST_QUOTES
 
 
 DB_DIR_NAME = DIR / 'database'
@@ -224,7 +224,7 @@ class Quote(BaseModel):
         return list(cls.select().order_by(fn.Random()).limit(limit))
 
     @classmethod
-    def get_user_unique_random(cls, user_id: Union[int, User], limit=20, ignored_last_quotes=300) -> List['Quote']:
+    def get_user_unique_random(cls, user_id: Union[int, User], limit=20, ignored_last_quotes=IGNORED_LAST_QUOTES) -> List['Quote']:
         # Last {ignored_last_quotes} returned quote's
         sub_query = Request.get_all_quote_id_by_user(user_id, ignored_last_quotes)
 
