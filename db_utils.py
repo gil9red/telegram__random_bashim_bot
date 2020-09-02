@@ -71,8 +71,7 @@ def catch_error(logger: logging.Logger):
                 Error.create_from(func, e, update)
 
                 if update:
-                    message = update.message or update.edited_message
-                    message.reply_text(ERROR_TEXT)
+                    update.effective_message.reply_text(ERROR_TEXT)
 
         return wrapper
     return actual_decorator

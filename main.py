@@ -18,7 +18,7 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, Callb
 from telegram.ext.dispatcher import run_async
 
 from third_party.bash_im import Quote
-from config import TOKEN, ERROR_TEXT, TEXT_HELP, TEXT_BUTTON_MORE, DIR_COMICS, ADMIN_USERNAME
+from config import TOKEN, ERROR_TEXT, HELP_TEXT, TEXT_BUTTON_MORE, DIR_COMICS, ADMIN_USERNAME
 from common import get_logger, log_func, download_random_quotes
 import db
 from db_utils import process_request, get_user_message_repr, catch_error, do_backup
@@ -56,15 +56,53 @@ def get_html_message(quote: Union[Quote, db.Quote]) -> str:
     return f'{text}\n\n{footer}'
 
 
+def reply_help(update: Update, context: CallbackContext):
+    username = update.effective_user.username
+    is_admin = username == ADMIN_USERNAME[1:]
+
+    text = HELP_TEXT + '\n'
+
+    text += """
+Возвращение статистики текущего пользователя:
+ - /stats
+ - stats или статистика
+    """
+
+    if is_admin:
+        text += r"""
+Возвращение статистики админа:
+ - /admin_stats
+ - admin[ _]stats или статистика[ _]админа
+ 
+Возвращение порядка вызова указанной цитаты у текущего пользователя:
+ - /get_used_quote
+ - get used quote (\d+) или (\d+)
+ 
+Возвращение пользователей:
+ - /get_users
+ - get users (\d+)
+    """
+
+    update.effective_message.reply_text(
+        text,
+        reply_markup=REPLY_KEYBOARD_MARKUP
+    )
+
+
 @run_async
 @catch_error(log)
 @process_request
 @log_func(log)
 def on_start(update: Update, context: CallbackContext):
-    update.message.reply_text(
-        f'Все готово!\n' + TEXT_HELP,
-        reply_markup=REPLY_KEYBOARD_MARKUP
-    )
+    reply_help(update, context)
+
+
+@run_async
+@catch_error(log)
+@process_request
+@log_func(log)
+def on_help(update: Update, context: CallbackContext):
+    reply_help(update, context)
 
 
 @run_async
@@ -86,8 +124,7 @@ def on_request(update: Update, context: CallbackContext):
         reply_markup = REPLY_KEYBOARD_MARKUP
 
     # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
-    message = update.message or update.edited_message
-    message.reply_html(
+    update.effective_message.reply_html(
         get_html_message(quote),
         disable_web_page_preview=True,
         reply_markup=reply_markup
@@ -101,7 +138,7 @@ def on_request(update: Update, context: CallbackContext):
 @process_request
 @log_func(log)
 def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
-    message = update.message or update.edited_message
+    message = update.effective_message
 
     quote_id = None
     try:
@@ -144,8 +181,7 @@ def on_get_user_stats(update: Update, context: CallbackContext):
     Разница между первым и последним запросом: {elapsed_days} дней
     '''
 
-    message = update.message or update.edited_message
-    message.reply_html(text)
+    update.effective_message.reply_html(text)
 
 
 @run_async
@@ -161,8 +197,7 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
     Запросов: {db.Request.select().count()}
     '''
 
-    message = update.message or update.edited_message
-    message.reply_html(text)
+    update.effective_message.reply_html(text)
 
 
 @run_async
@@ -170,8 +205,6 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
 @process_request
 @log_func(log)
 def on_get_users(update: Update, context: CallbackContext):
-    message = update.message or update.edited_message
-
     try:
         if context.match and context.match.groups():
             limit = int(context.match.group(1))
@@ -186,17 +219,7 @@ def on_get_users(update: Update, context: CallbackContext):
 
     text = 'Users:\n' + ('\n' + '_' * 20 + '\n').join(items)
 
-    message.reply_text(text)
-
-
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
-def on_help(update: Update, context: CallbackContext):
-    update.message.reply_text(
-        TEXT_HELP, reply_markup=REPLY_KEYBOARD_MARKUP
-    )
+    update.effective_message.reply_text(text)
 
 
 @run_async
@@ -233,8 +256,7 @@ def on_error(update: Update, context: CallbackContext):
     db.Error.create_from(on_error, context.error, update)
 
     if update:
-        message = update.message or update.edited_message
-        message.reply_text(ERROR_TEXT)
+        update.effective_message.reply_text(ERROR_TEXT)
 
 
 def main():
@@ -255,8 +277,16 @@ def main():
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler('start', on_start))
-    dp.add_handler(CommandHandler('more', on_request))
+
     dp.add_handler(CommandHandler('help', on_help))
+    dp.add_handler(
+        MessageHandler(
+            Filters.regex(r'(?i)^help$|^помощь$'),
+            on_help
+        )
+    )
+
+    dp.add_handler(CommandHandler('more', on_request))
 
     # Возвращение статистики текущего пользователя
     dp.add_handler(CommandHandler('stats', on_get_user_stats))
@@ -276,7 +306,7 @@ def main():
         )
     )
 
-    # Возвращение порядка вызова указанной цитаты у текущего юзера, сортировка от конца
+    # Возвращение порядка вызова указанной цитаты у текущего пользователя, сортировка от конца
     dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
