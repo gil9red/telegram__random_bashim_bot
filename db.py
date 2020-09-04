@@ -353,6 +353,20 @@ if __name__ == '__main__':
     print()
 
     print('Total quotes:', Quote.select().count())
+
+    fn_year = fn.strftime('%Y', Quote.date).cast('INTEGER')
+    query = (
+        Quote
+        .select(
+            fn_year.alias('year'),
+            fn.count(Quote.id).alias('count')
+        )
+        .group_by(fn_year)
+        .order_by(fn_year)
+    )
+    for row in query:
+        print(f'    {row.year}: {row.count}')
+
     print()
 
     limit = 3
