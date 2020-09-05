@@ -86,6 +86,7 @@ def download_random_quotes(log, dir_comics):
             t = time.perf_counter_ns()
 
             for quote in get_random_quotes_list(log):
+                # При отсутствии, цитата будет добавлена в базу
                 db.Quote.get_from(quote)
 
                 # Сразу же пробуем скачать комиксы
