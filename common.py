@@ -170,6 +170,10 @@ def reply_help(update: Update, context: CallbackContext):
 Получение пользователей:
  - /get_users
  - get[ _]users (\d+)
+ 
+Обновление цитаты в базе с сайта:
+ - /update_quote
+ - update[ _]quote (\d+)
     """
 
     update.effective_message.reply_text(
@@ -181,6 +185,12 @@ def reply_help(update: Update, context: CallbackContext):
 def reply_error(text: str, update: Update, context: CallbackContext):
     update.effective_message.reply_text(
         '⚠ ' + text
+    )
+
+
+def reply_info(text: str, update: Update, context: CallbackContext):
+    update.effective_message.reply_text(
+        'ℹ️ ' + text
     )
 
 

@@ -4,9 +4,11 @@
 __author__ = 'ipetrash'
 
 
+import datetime as DT
 import os
 import time
 from threading import Thread
+from typing import Optional
 
 # pip install python-telegram-bot
 from telegram import (
@@ -20,7 +22,7 @@ from config import TOKEN, ERROR_TEXT, DIR_COMICS
 from common import (
     get_logger, log_func, download_random_quotes,
     REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN,
-    reply_help, reply_error, reply_quote
+    reply_help, reply_error, reply_quote, reply_info
 )
 from db_utils import process_request, get_user_message_repr, catch_error, do_backup
 from third_party import bash_im
@@ -45,6 +47,19 @@ def get_random_quote(update: Update, context: CallbackContext) -> db.Quote:
         log.debug('New quotes: %s.', len(quotes))
 
     return quotes.pop()
+
+
+def get_quote_id(context: CallbackContext) -> Optional[int]:
+    quote_id = None
+    try:
+        if context.match:
+            quote_id = int(context.match.group(1))
+        else:
+            quote_id = int(context.args[0])
+    except:
+        pass
+
+    return quote_id
 
 
 @run_async
@@ -91,17 +106,7 @@ def on_request(update: Update, context: CallbackContext):
 @process_request
 @log_func(log)
 def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
-    message = update.effective_message
-
-    quote_id = None
-    try:
-        if context.match:
-            quote_id = int(context.match.group(1))
-        else:
-            quote_id = int(context.args[0])
-    except:
-        pass
-
+    quote_id = get_quote_id(context)
     if not quote_id:
         reply_error('Номер цитаты не указан', update, context)
         return
@@ -112,7 +117,7 @@ def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
     items = [i for i, x in enumerate(sub_query) if x.quote_id == quote_id]
     text = f'Цитата #{quote_id} найдена в {items}'
 
-    message.reply_text(text)
+    reply_info(text, update, context)
 
 
 @run_async
@@ -180,15 +185,7 @@ def on_get_users(update: Update, context: CallbackContext):
 @process_request
 @log_func(log)
 def on_get_quote(update: Update, context: CallbackContext):
-    quote_id = None
-    try:
-        if context.match:
-            quote_id = int(context.match.group(1))
-        else:
-            quote_id = int(context.args[0])
-    except:
-        pass
-
+    quote_id = get_quote_id(context)
     if not quote_id:
         reply_error('Номер цитаты не указан', update, context)
         return
@@ -207,15 +204,7 @@ def on_get_quote(update: Update, context: CallbackContext):
 @process_request
 @log_func(log)
 def on_get_external_quote(update: Update, context: CallbackContext):
-    quote_id = None
-    try:
-        if context.match:
-            quote_id = int(context.match.group(1))
-        else:
-            quote_id = int(context.args[0])
-    except:
-        pass
-
+    quote_id = get_quote_id(context)
     if not quote_id:
         reply_error('Номер цитаты не указан', update, context)
         return
@@ -226,6 +215,53 @@ def on_get_external_quote(update: Update, context: CallbackContext):
         return
 
     reply_quote(quote, update, context)
+
+
+@run_async
+@catch_error(log)
+@process_request
+@log_func(log)
+def on_update_quote(update: Update, context: CallbackContext):
+    quote_id = get_quote_id(context)
+    if not quote_id:
+        reply_error('Номер цитаты не указан', update, context)
+        return
+
+    quote_bashim = bash_im.Quote.parse_from(quote_id)
+    if not quote_bashim:
+        reply_error(f'Цитаты #{quote_id} на сайте нет', update, context)
+        return
+
+    quote_db: db.Quote = db.Quote.get_or_none(quote_id)
+    if not quote_db:
+        log.info(f'Цитаты #{quote_id} в базе нет, будет создание цитаты')
+
+        # При отсутствии, цитата будет добавлена в базу
+        db.Quote.get_from(quote_bashim)
+
+        # Сразу же пробуем скачать комиксы
+        quote_bashim.download_comics(DIR_COMICS)
+
+        reply_info(f'Цитата #{quote_id} добавлена в базу', update, context)
+
+    else:
+        # TODO: Поддержать проверку и добавление новых комиксов
+        modified_list = []
+
+        if quote_db.text != quote_bashim.text:
+            quote_db.text = quote_bashim.text
+            modified_list.append('текст')
+
+        if modified_list:
+            quote_db.modification_date = DT.date.today()
+            quote_db.save()
+
+            text = f'Цитата #{quote_id} обновлена ({", ".join(modified_list)})'
+            reply_info(text, update, context)
+
+        else:
+            text = f'Нет изменений в цитате #{quote_id}'
+            reply_info(text, update, context)
 
 
 @run_async
