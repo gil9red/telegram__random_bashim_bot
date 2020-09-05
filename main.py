@@ -171,10 +171,10 @@ def on_get_users(update: Update, context: CallbackContext):
     except:
         limit = 10
 
-    items = []
-    for user in db.User.select().limit(limit):
-        items.append(get_user_message_repr(user))
-
+    items = [
+        get_user_message_repr(user)
+        for user in db.User.select().order_by(db.User.last_activity.desc()).limit(limit)
+    ]
     text = 'Users:\n' + ('\n' + '_' * 20 + '\n').join(items)
 
     update.effective_message.reply_text(text)
