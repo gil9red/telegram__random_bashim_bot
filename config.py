@@ -21,7 +21,7 @@ DIR_COMICS.mkdir(parents=True, exist_ok=True)
 URL = 'https://bash.im/random'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
 
-ERROR_TEXT = '⚠ Возникла какая-то проблема. Попробуйте повторить запрос или попробовать чуть позже...'
+ERROR_TEXT = 'Возникла какая-то проблема. Попробуйте повторить запрос или попробовать чуть позже...'
 
 TEXT_BUTTON_MORE = 'Хочу цитату!'
 HELP_TEXT = f'Для получения цитаты отправьте любое сообщение, ' \

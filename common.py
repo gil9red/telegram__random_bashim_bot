@@ -5,14 +5,27 @@ __author__ = 'ipetrash'
 
 
 import functools
+import html
 import logging
 import time
 import sys
 from pathlib import Path
 from random import randint
+from typing import Union
 
-from third_party.bash_im import get_random_quotes_list
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import CallbackContext, Filters
+
 import db
+from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE
+from third_party import bash_im
+
+
+REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
+    [[TEXT_BUTTON_MORE]], resize_keyboard=True
+)
+
+FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
 
 
 def get_logger(file_name: str, dir_name='logs'):
@@ -85,7 +98,7 @@ def download_random_quotes(log, dir_comics):
             log.debug(f'{download_random_quotes.__name__}. Now quotes: {count}')
             t = time.perf_counter_ns()
 
-            for quote in get_random_quotes_list(log):
+            for quote in bash_im.get_random_quotes_list(log):
                 # При отсутствии, цитата будет добавлена в базу
                 db.Quote.get_from(quote)
 
@@ -114,3 +127,72 @@ def download_random_quotes(log, dir_comics):
                 log.debug('Deep sleep: %s minutes', minutes)
 
                 time.sleep(minutes * 60)
+
+
+def get_html_message(quote: Union[bash_im.Quote, db.Quote]) -> str:
+    text = html.escape(quote.text)
+    footer = f"""<a href="{quote.url}">{quote.date_str} | #{quote.id}</a>"""
+    return f'{text}\n\n{footer}'
+
+
+# TODO: генерировать список команд из обработчика
+#       описание команды можно сделать в функции как docstring
+def reply_help(update: Update, context: CallbackContext):
+    username = update.effective_user.username
+    is_admin = username == ADMIN_USERNAME[1:]
+
+    text = HELP_TEXT + '\n'
+
+    text += """
+Получение статистики текущего пользователя:
+ - /stats
+ - stats или статистика
+    """
+
+    if is_admin:
+        text += r"""
+Получение статистики админа:
+ - /admin_stats
+ - admin[ _]stats или статистика[ _]админа
+
+Получение порядка вызова указанной цитаты у текущего пользователя:
+ - /get_used_quote
+ - get used quote (\d+) или (\d+)
+
+Получение пользователей:
+ - /get_users
+ - get users (\d+)
+
+Получение цитаты из базы:
+ - /get_quote
+ - get quote (\d+)
+ 
+Получение цитаты из сайта:
+ - /get_external_quote
+ - get external quote (\d+)
+    """
+
+    update.effective_message.reply_text(
+        text,
+        reply_markup=REPLY_KEYBOARD_MARKUP
+    )
+
+
+def reply_error(text: str, update: Update, context: CallbackContext):
+    update.effective_message.reply_text(
+        '⚠ ' + text
+    )
+
+
+def reply_quote(
+        quote: Union[bash_im.Quote, db.Quote],
+        update: Update,
+        context: CallbackContext,
+        reply_markup: ReplyKeyboardMarkup = None
+):
+    # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
+    update.effective_message.reply_html(
+        get_html_message(quote),
+        disable_web_page_preview=True,
+        reply_markup=reply_markup
+    )

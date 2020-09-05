@@ -4,32 +4,29 @@
 __author__ = 'ipetrash'
 
 
-import html
 import os
 import time
 from threading import Thread
-from typing import Union
 
 # pip install python-telegram-bot
 from telegram import (
-    ReplyKeyboardMarkup, Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup, ChatAction
+    Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup, ChatAction
 )
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 from telegram.ext.dispatcher import run_async
 
-from third_party.bash_im import Quote
-from config import TOKEN, ERROR_TEXT, HELP_TEXT, TEXT_BUTTON_MORE, DIR_COMICS, ADMIN_USERNAME
-from common import get_logger, log_func, download_random_quotes
 import db
+from config import TOKEN, ERROR_TEXT, DIR_COMICS
+from common import (
+    get_logger, log_func, download_random_quotes,
+    REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN,
+    reply_help, reply_error, reply_quote
+)
 from db_utils import process_request, get_user_message_repr, catch_error, do_backup
+from third_party import bash_im
 
 
 log = get_logger(__file__)
-
-REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
-    [[TEXT_BUTTON_MORE]], resize_keyboard=True
-)
-FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
 
 
 def get_random_quote(update: Update, context: CallbackContext) -> db.Quote:
@@ -48,45 +45,6 @@ def get_random_quote(update: Update, context: CallbackContext) -> db.Quote:
         log.debug('New quotes: %s.', len(quotes))
 
     return quotes.pop()
-
-
-def get_html_message(quote: Union[Quote, db.Quote]) -> str:
-    text = html.escape(quote.text)
-    footer = f"""<a href="{quote.url}">{quote.date_str} | #{quote.id}</a>"""
-    return f'{text}\n\n{footer}'
-
-
-def reply_help(update: Update, context: CallbackContext):
-    username = update.effective_user.username
-    is_admin = username == ADMIN_USERNAME[1:]
-
-    text = HELP_TEXT + '\n'
-
-    text += """
-Возвращение статистики текущего пользователя:
- - /stats
- - stats или статистика
-    """
-
-    if is_admin:
-        text += r"""
-Возвращение статистики админа:
- - /admin_stats
- - admin[ _]stats или статистика[ _]админа
- 
-Возвращение порядка вызова указанной цитаты у текущего пользователя:
- - /get_used_quote
- - get used quote (\d+) или (\d+)
- 
-Возвращение пользователей:
- - /get_users
- - get users (\d+)
-    """
-
-    update.effective_message.reply_text(
-        text,
-        reply_markup=REPLY_KEYBOARD_MARKUP
-    )
 
 
 @run_async
@@ -123,12 +81,7 @@ def on_request(update: Update, context: CallbackContext):
         # Поэтому при любой возможности, добавляем клавиатуру
         reply_markup = REPLY_KEYBOARD_MARKUP
 
-    # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
-    update.effective_message.reply_html(
-        get_html_message(quote),
-        disable_web_page_preview=True,
-        reply_markup=reply_markup
-    )
+    reply_quote(quote, update, context, reply_markup)
 
     return quote
 
@@ -150,7 +103,7 @@ def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
         pass
 
     if not quote_id:
-        message.reply_text('Номер цитаты не указан.')
+        reply_error('Номер цитаты не указан', update, context)
         return
 
     user_id = update.effective_user.id
@@ -226,6 +179,59 @@ def on_get_users(update: Update, context: CallbackContext):
 @catch_error(log)
 @process_request
 @log_func(log)
+def on_get_quote(update: Update, context: CallbackContext):
+    quote_id = None
+    try:
+        if context.match:
+            quote_id = int(context.match.group(1))
+        else:
+            quote_id = int(context.args[0])
+    except:
+        pass
+
+    if not quote_id:
+        reply_error('Номер цитаты не указан', update, context)
+        return
+
+    quote = db.Quote.get_or_none(quote_id)
+
+    if not quote:
+        reply_error(f'Цитаты #{quote_id} нет в базе', update, context)
+        return
+
+    reply_quote(quote, update, context)
+
+
+@run_async
+@catch_error(log)
+@process_request
+@log_func(log)
+def on_get_external_quote(update: Update, context: CallbackContext):
+    quote_id = None
+    try:
+        if context.match:
+            quote_id = int(context.match.group(1))
+        else:
+            quote_id = int(context.args[0])
+    except:
+        pass
+
+    if not quote_id:
+        reply_error('Номер цитаты не указан', update, context)
+        return
+
+    quote = bash_im.Quote.parse_from(quote_id)
+    if not quote:
+        reply_error(f'Цитаты #{quote_id} на сайте нет', update, context)
+        return
+
+    reply_quote(quote, update, context)
+
+
+@run_async
+@catch_error(log)
+@process_request
+@log_func(log)
 def on_callback_query(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
@@ -256,7 +262,7 @@ def on_error(update: Update, context: CallbackContext):
     db.Error.create_from(on_error, context.error, update)
 
     if update:
-        update.effective_message.reply_text(ERROR_TEXT)
+        reply_error(ERROR_TEXT, update, context)
 
 
 def main():
@@ -326,6 +332,22 @@ def main():
         MessageHandler(
             FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get users (\d+)$') | Filters.regex(r'(?i)^get users$')),
             on_get_users
+        )
+    )
+
+    dp.add_handler(CommandHandler('get_quote', on_get_quote, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]quote (\d+)$'),
+            on_get_quote
+        )
+    )
+
+    dp.add_handler(CommandHandler('get_external_quote', on_get_external_quote, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]external[ _]quote (\d+)$'),
+            on_get_external_quote
         )
     )
 

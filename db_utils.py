@@ -19,6 +19,7 @@ from telegram.ext import CallbackContext
 import schedule
 
 from config import ERROR_TEXT
+from common import reply_error
 from db import DB_DIR_NAME, User, Chat, Quote, Request, Error
 
 
@@ -71,7 +72,7 @@ def catch_error(logger: logging.Logger):
                 Error.create_from(func, e, update)
 
                 if update:
-                    update.effective_message.reply_text(ERROR_TEXT)
+                    reply_error(ERROR_TEXT, update, context)
 
         return wrapper
     return actual_decorator
