@@ -199,7 +199,7 @@ class Quote(BaseModel):
 
     @classmethod
     def get_from(cls, quote: bash_im.Quote) -> 'Quote':
-        quote_db = cls.get_or_none(cls.id == quote.id)
+        quote_db = cls.get_or_none(quote.id)
         if not quote_db:
             quote_db = cls.create(
                 id=quote.id,
