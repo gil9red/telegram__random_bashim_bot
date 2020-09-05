@@ -316,7 +316,7 @@ def main():
     dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get used quote (\d+)$'),
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]quote (\d+)$'),
             on_get_used_quote_in_requests
         )
     )
@@ -330,7 +330,7 @@ def main():
     dp.add_handler(CommandHandler('get_users', on_get_users, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get users (\d+)$') | Filters.regex(r'(?i)^get users$')),
+            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]users (\d+)$') | Filters.regex(r'(?i)^get users$')),
             on_get_users
         )
     )
