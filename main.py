@@ -387,6 +387,14 @@ def main():
         )
     )
 
+    dp.add_handler(CommandHandler('update_quote', on_update_quote, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^update[ _]quote (\d+)$'),
+            on_update_quote
+        )
+    )
+
     dp.add_handler(MessageHandler(Filters.text, on_request))
     dp.add_handler(CallbackQueryHandler(on_callback_query))
 
