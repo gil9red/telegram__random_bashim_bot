@@ -147,6 +147,14 @@ def reply_help(update: Update, context: CallbackContext):
 Получение статистики текущего пользователя:
  - /stats
  - stats или статистика
+
+Получение цитаты из базы:
+ - /get_quote <номер цитаты>
+ - get quote <номер цитаты>
+ 
+Получение цитаты из сайта:
+ - /get_external_quote <номер цитаты>
+ - get external quote <номер цитаты>
     """
 
     if is_admin:
@@ -157,19 +165,11 @@ def reply_help(update: Update, context: CallbackContext):
 
 Получение порядка вызова указанной цитаты у текущего пользователя:
  - /get_used_quote
- - get used quote (\d+) или (\d+)
+ - get[ _]used[ _]quote (\d+) или (\d+)
 
 Получение пользователей:
  - /get_users
- - get users (\d+)
-
-Получение цитаты из базы:
- - /get_quote
- - get quote (\d+)
- 
-Получение цитаты из сайта:
- - /get_external_quote
- - get external quote (\d+)
+ - get[ _]users (\d+)
     """
 
     update.effective_message.reply_text(

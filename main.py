@@ -335,18 +335,18 @@ def main():
         )
     )
 
-    dp.add_handler(CommandHandler('get_quote', on_get_quote, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('get_quote', on_get_quote))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]quote (\d+)$'),
+            Filters.regex(r'(?i)^get[ _]quote (\d+)$'),
             on_get_quote
         )
     )
 
-    dp.add_handler(CommandHandler('get_external_quote', on_get_external_quote, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('get_external_quote', on_get_external_quote))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]external[ _]quote (\d+)$'),
+            Filters.regex(r'(?i)^get[ _]external[ _]quote (\d+)$'),
             on_get_external_quote
         )
     )
