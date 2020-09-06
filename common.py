@@ -54,6 +54,9 @@ def get_logger(file_name: str, dir_name='logs'):
     return log
 
 
+log = get_logger(Path(__file__).resolve().parent.name)
+
+
 def log_func(logger: logging.Logger):
     def actual_decorator(func):
         @functools.wraps(func)

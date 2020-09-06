@@ -20,15 +20,12 @@ from telegram.ext.dispatcher import run_async
 import db
 from config import TOKEN, ERROR_TEXT, DIR_COMICS
 from common import (
-    get_logger, log_func, download_random_quotes,
+    log, log_func, download_random_quotes,
     REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN,
     reply_help, reply_error, reply_quote, reply_info
 )
 from db_utils import process_request, get_user_message_repr, catch_error, do_backup
 from third_party import bash_im
-
-
-log = get_logger(__file__)
 
 
 def get_random_quote(update: Update, context: CallbackContext) -> db.Quote:
