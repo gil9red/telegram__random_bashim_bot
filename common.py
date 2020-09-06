@@ -4,6 +4,7 @@
 __author__ = 'ipetrash'
 
 
+import datetime as DT
 import functools
 import html
 import logging
@@ -17,7 +18,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CallbackContext, Filters
 
 import db
-from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE
+from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS
 from third_party import bash_im
 
 
@@ -130,6 +131,52 @@ def download_random_quotes(log, dir_comics):
                 log.debug('Deep sleep: %s minutes', minutes)
 
                 time.sleep(minutes * 60)
+
+
+def update_quote(quote_id: int, update: Update = None, context: CallbackContext = None):
+    need_reply = update and context
+
+    quote_bashim = bash_im.Quote.parse_from(quote_id)
+    if not quote_bashim:
+        text = f'Цитаты #{quote_id} на сайте нет'
+        log.info(text)
+        need_reply and reply_error(text, update, context)
+        return
+
+    quote_db: db.Quote = db.Quote.get_or_none(quote_id)
+    if not quote_db:
+        log.info(f'Цитаты #{quote_id} в базе нет, будет создание цитаты')
+
+        # При отсутствии, цитата будет добавлена в базу
+        db.Quote.get_from(quote_bashim)
+
+        # Сразу же пробуем скачать комиксы
+        quote_bashim.download_comics(DIR_COMICS)
+
+        text = f'Цитата #{quote_id} добавлена в базу'
+        log.info(text)
+        need_reply and reply_info(text, update, context)
+
+    else:
+        # TODO: Поддержать проверку и добавление новых комиксов
+        modified_list = []
+
+        if quote_db.text != quote_bashim.text:
+            quote_db.text = quote_bashim.text
+            modified_list.append('текст')
+
+        if modified_list:
+            quote_db.modification_date = DT.date.today()
+            quote_db.save()
+
+            text = f'Цитата #{quote_id} обновлена ({", ".join(modified_list)})'
+            log.info(text)
+            need_reply and reply_info(text, update, context)
+
+        else:
+            text = f'Нет изменений в цитате #{quote_id}'
+            log.info(text)
+            need_reply and reply_info(text, update, context)
 
 
 def get_html_message(quote: Union[bash_im.Quote, db.Quote]) -> str:

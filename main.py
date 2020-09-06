@@ -21,7 +21,7 @@ import db
 from config import TOKEN, ERROR_TEXT, DIR_COMICS
 from common import (
     log, log_func, download_random_quotes,
-    REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN,
+    REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, update_quote,
     reply_help, reply_error, reply_quote, reply_info
 )
 from db_utils import process_request, get_user_message_repr, catch_error, do_backup
@@ -224,41 +224,7 @@ def on_update_quote(update: Update, context: CallbackContext):
         reply_error('Номер цитаты не указан', update, context)
         return
 
-    quote_bashim = bash_im.Quote.parse_from(quote_id)
-    if not quote_bashim:
-        reply_error(f'Цитаты #{quote_id} на сайте нет', update, context)
-        return
-
-    quote_db: db.Quote = db.Quote.get_or_none(quote_id)
-    if not quote_db:
-        log.info(f'Цитаты #{quote_id} в базе нет, будет создание цитаты')
-
-        # При отсутствии, цитата будет добавлена в базу
-        db.Quote.get_from(quote_bashim)
-
-        # Сразу же пробуем скачать комиксы
-        quote_bashim.download_comics(DIR_COMICS)
-
-        reply_info(f'Цитата #{quote_id} добавлена в базу', update, context)
-
-    else:
-        # TODO: Поддержать проверку и добавление новых комиксов
-        modified_list = []
-
-        if quote_db.text != quote_bashim.text:
-            quote_db.text = quote_bashim.text
-            modified_list.append('текст')
-
-        if modified_list:
-            quote_db.modification_date = DT.date.today()
-            quote_db.save()
-
-            text = f'Цитата #{quote_id} обновлена ({", ".join(modified_list)})'
-            reply_info(text, update, context)
-
-        else:
-            text = f'Нет изменений в цитате #{quote_id}'
-            reply_info(text, update, context)
+    update_quote(quote_id, update, context)
 
 
 @run_async
