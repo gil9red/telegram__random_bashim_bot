@@ -194,6 +194,10 @@ def reply_help(update: Update, context: CallbackContext):
     text = HELP_TEXT + '\n'
 
     text += """
+Получение помощи по командам:
+ - /help
+ - help или помощь
+
 Получение статистики текущего пользователя:
  - /stats
  - stats или статистика
