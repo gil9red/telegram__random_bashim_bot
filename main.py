@@ -4,7 +4,6 @@
 __author__ = 'ipetrash'
 
 
-import datetime as DT
 import os
 import time
 from threading import Thread
@@ -20,7 +19,7 @@ from telegram.ext.dispatcher import run_async
 import db
 from config import TOKEN, ERROR_TEXT, DIR_COMICS
 from common import (
-    log, log_func, download_random_quotes,
+    log, log_func, download_random_quotes, download_main_page_quotes,
     REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, update_quote,
     reply_help, reply_error, reply_quote, reply_info
 )
@@ -384,8 +383,11 @@ def main():
 
 
 if __name__ == '__main__':
-    thread_download = Thread(target=download_random_quotes, args=[log, DIR_COMICS])
-    thread_download.start()
+    thread_download_main_page_quotes = Thread(target=download_main_page_quotes, args=[log, DIR_COMICS])
+    thread_download_main_page_quotes.start()
+
+    thread_download_random_quotes = Thread(target=download_random_quotes, args=[log, DIR_COMICS])
+    thread_download_random_quotes.start()
 
     thread_backup = Thread(target=do_backup, args=[log])
     thread_backup.start()

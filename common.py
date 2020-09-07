@@ -13,20 +13,17 @@ import sys
 from pathlib import Path
 from random import randint
 from typing import Union
+from threading import RLock
 
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CallbackContext, Filters
 
+# pip install schedule
+import schedule
+
 import db
 from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS
 from third_party import bash_im
-
-
-REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
-    [[TEXT_BUTTON_MORE]], resize_keyboard=True
-)
-
-FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
 
 
 def get_logger(file_name: str, dir_name='logs'):
@@ -55,10 +52,20 @@ def get_logger(file_name: str, dir_name='logs'):
     return log
 
 
+REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
+    [[TEXT_BUTTON_MORE]], resize_keyboard=True
+)
+
+FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
+
+
 log = get_logger(Path(__file__).resolve().parent.name)
 
+# Для препятствия одновременной работы в download_random_quotes и download_new_quotes
+lock = RLock()
 
-def log_func(logger: logging.Logger):
+
+def log_func(log: logging.Logger):
     def actual_decorator(func):
         @functools.wraps(func)
         def wrapper(update: Update, context: CallbackContext):
@@ -82,13 +89,10 @@ def log_func(logger: logging.Logger):
 
                 msg = f'[chat_id={chat_id}, user_id={user_id}, ' \
                       f'first_name={first_name!r}, last_name={last_name!r}, ' \
-                      f'username={username!r}, language_code={language_code}]'
+                      f'username={username!r}, language_code={language_code}, message={message!r}]'
                 msg = func.__name__ + msg
 
-                if message:
-                    msg += f'\n    Message: {message!r}'
-
-                logger.debug(msg)
+                log.debug(msg)
 
             return func(update, context)
 
@@ -96,24 +100,28 @@ def log_func(logger: logging.Logger):
     return actual_decorator
 
 
-def download_random_quotes(log, dir_comics):
+def download_random_quotes(log: logging.Logger, dir_comics):
     i = 0
 
     while True:
         try:
-            count = db.Quote.select().count()
-            log.debug(f'{download_random_quotes.__name__}. Now quotes: {count}')
-            t = time.perf_counter_ns()
+            with lock:
+                count = db.Quote.select().count()
+                log.debug(f'{download_random_quotes.__name__}. Now quotes: {count}')
+                t = time.perf_counter_ns()
 
-            for quote in bash_im.get_random_quotes_list(log):
-                # При отсутствии, цитата будет добавлена в базу
-                db.Quote.get_from(quote)
+                for quote in bash_im.get_random_quotes(log):
+                    # При отсутствии, цитата будет добавлена в базу
+                    db.Quote.get_from(quote)
 
-                # Сразу же пробуем скачать комиксы
-                quote.download_comics(dir_comics)
+                    # Сразу же пробуем скачать комиксы
+                    quote.download_comics(dir_comics)
 
-            elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
-            log.debug('Added new quotes: %s, elapsed %s ms', db.Quote.select().count() - count, elapsed_ms)
+                elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
+                log.debug(
+                    'Added new quotes (random): %s, elapsed %s ms',
+                    db.Quote.select().count() - count, elapsed_ms
+                )
 
         except:
             log.exception('')
@@ -134,6 +142,44 @@ def download_random_quotes(log, dir_comics):
                 log.debug('Deep sleep: %s minutes', minutes)
 
                 time.sleep(minutes * 60)
+
+
+def download_main_page_quotes(log: logging.Logger, dir_comics):
+    def run():
+        while True:
+            try:
+                with lock:
+                    count = db.Quote.select().count()
+                    log.debug(f'{download_main_page_quotes.__name__}. Now quotes: {count}')
+                    t = time.perf_counter_ns()
+
+                    for quote in bash_im.get_main_page_quotes(log):
+                        # При отсутствии, цитата будет добавлена в базу
+                        db.Quote.get_from(quote)
+
+                        # Сразу же пробуем скачать комиксы
+                        quote.download_comics(dir_comics)
+
+                    elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
+                    log.debug(
+                        'Added new quotes (main page): %s, elapsed %s ms',
+                        db.Quote.select().count() - count, elapsed_ms
+                    )
+
+                break
+
+            except Exception:
+                log.exception('')
+
+                log.info("I'll try again in 1 minute ...")
+                time.sleep(60)
+
+    # Каждый день в 22:00
+    schedule.every().day.at("22:00").do(run)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
 
 
 def update_quote(quote_id: int, update: Update = None, context: CallbackContext = None):
