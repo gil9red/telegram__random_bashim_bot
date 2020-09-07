@@ -144,12 +144,20 @@ def on_get_user_stats(update: Update, context: CallbackContext):
 @process_request
 @log_func(log)
 def on_get_admin_stats(update: Update, context: CallbackContext):
+    quote_count = db.Quote.select().count()
+    quote_with_comics_count = db.Quote.get_all_with_comics().count()
+
+    text_year_by_counts = "\n".join(
+        f'        {year}: {count}'
+        for year, count in db.Quote.get_year_by_counts()
+    )
+
     text = f'''\
 <b>Статистика админа:</b>
     Пользователей: {db.User.select().count()}
-    Цитат: {db.Quote.select().count()}
-    Среди них с комиксами: {db.Quote.get_all_with_comics().count()}
     Запросов: {db.Request.select().count()}
+    Цитат {quote_count}, с комиксами {quote_with_comics_count}:
+{text_year_by_counts}
     '''
 
     update.effective_message.reply_html(text)

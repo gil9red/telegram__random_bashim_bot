@@ -6,12 +6,13 @@ __author__ = 'ipetrash'
 
 import datetime as DT
 import time
-from typing import List, Optional, Union, Callable
+from typing import List, Optional, Union, Callable, Tuple
 import traceback
 
 # pip install peewee
-from peewee import *
-import peewee
+from peewee import (
+    Model, TextField, ForeignKeyField, DateTimeField, DateField, IntegerField, fn, JOIN, ModelSelect
+)
 from playhouse.sqliteq import SqliteQueueDatabase
 
 import telegram
@@ -237,7 +238,7 @@ class Quote(BaseModel):
         return list(query)
 
     @classmethod
-    def get_all_with_comics(cls, where: peewee.ModelSelect = None) -> peewee.ModelSelect:
+    def get_all_with_comics(cls, where: ModelSelect = None) -> ModelSelect:
         query = cls.select()
         if where:
             query = query.where(where)
@@ -246,6 +247,21 @@ class Quote(BaseModel):
             .join(Comics, JOIN.LEFT_OUTER)\
             .group_by(cls)\
             .having(fn.COUNT(Comics.id) > 0)
+
+    @classmethod
+    def get_year_by_counts(cls) -> List[Tuple[int, int]]:
+        fn_year = fn.strftime('%Y', cls.date).cast('INTEGER')
+        query = (
+            cls
+            .select(
+                fn_year.alias('year'),
+                fn.count(cls.id).alias('count')
+            )
+            .group_by(fn_year)
+            .order_by(fn_year)
+        )
+
+        return [(row.year, row.count) for row in query]
 
     def __str__(self):
         return self.__class__.__name__ + \
@@ -275,7 +291,7 @@ class Request(BaseModel):
     message = TextField(null=True)
 
     @classmethod
-    def get_all_quote_id_by_user(cls, user_id: Union[int, User], ignored_last_quotes=-1) -> peewee.ModelSelect:
+    def get_all_quote_id_by_user(cls, user_id: Union[int, User], ignored_last_quotes=-1) -> ModelSelect:
         query = (
             Request
             .select(Request.quote_id)
@@ -355,18 +371,8 @@ if __name__ == '__main__':
 
     print('Total quotes:', Quote.select().count())
 
-    fn_year = fn.strftime('%Y', Quote.date).cast('INTEGER')
-    query = (
-        Quote
-        .select(
-            fn_year.alias('year'),
-            fn.count(Quote.id).alias('count')
-        )
-        .group_by(fn_year)
-        .order_by(fn_year)
-    )
-    for row in query:
-        print(f'    {row.year}: {row.count}')
+    for year, count in Quote.get_year_by_counts():
+        print(f'    {year}: {count}')
 
     print()
 
