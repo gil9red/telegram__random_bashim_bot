@@ -61,11 +61,8 @@ log = get_logger(Path(__file__).resolve().parent.name)
 def log_func(logger: logging.Logger):
     def actual_decorator(func):
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            msg = ''
-            if args and args[0]:
-                update = args[0]
-
+        def wrapper(update: Update, context: CallbackContext):
+            if update:
                 chat_id = user_id = first_name = last_name = username = language_code = None
 
                 if update.effective_chat:
@@ -78,16 +75,22 @@ def log_func(logger: logging.Logger):
                     username = update.effective_user.username
                     language_code = update.effective_user.language_code
 
+                try:
+                    command = update.effective_message.text
+                except:
+                    command = ''
+
                 msg = f'[chat_id={chat_id}, user_id={user_id}, ' \
                       f'first_name={first_name!r}, last_name={last_name!r}, ' \
                       f'username={username!r}, language_code={language_code}]'
+                msg = func.__name__ + msg
 
-            logger.debug(f'Start {func.__name__}{msg}')
-            t = time.perf_counter_ns()
-            result = func(*args, **kwargs)
-            logger.debug(f'Finish {func.__name__}. Elapsed {(time.perf_counter_ns() - t) // 1_000_000} ms')
+                if command:
+                    msg += f'\n    Message text: {command!r}'
 
-            return result
+                logger.debug(msg)
+
+            return func(update, context)
 
         return wrapper
     return actual_decorator
