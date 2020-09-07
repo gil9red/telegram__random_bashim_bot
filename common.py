@@ -76,17 +76,17 @@ def log_func(logger: logging.Logger):
                     language_code = update.effective_user.language_code
 
                 try:
-                    command = update.effective_message.text
+                    message = update.effective_message.text
                 except:
-                    command = ''
+                    message = ''
 
                 msg = f'[chat_id={chat_id}, user_id={user_id}, ' \
                       f'first_name={first_name!r}, last_name={last_name!r}, ' \
                       f'username={username!r}, language_code={language_code}]'
                 msg = func.__name__ + msg
 
-                if command:
-                    msg += f'\n    Message text: {command!r}'
+                if message:
+                    msg += f'\n    Message: {message!r}'
 
                 logger.debug(msg)
 
