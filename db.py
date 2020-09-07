@@ -272,6 +272,7 @@ class Request(BaseModel):
     user = ForeignKeyField(User, null=True, backref='requests')
     chat = ForeignKeyField(Chat, null=True, backref='requests')
     quote = ForeignKeyField(Quote, null=True, backref='requests')
+    message = TextField(null=True)
 
     @classmethod
     def get_all_quote_id_by_user(cls, user_id: Union[int, User], ignored_last_quotes=-1) -> peewee.ModelSelect:

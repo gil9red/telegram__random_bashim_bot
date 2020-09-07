@@ -39,6 +39,11 @@ def process_request(func):
             if chat_db:
                 chat_db.actualize(chat)
 
+        try:
+            message = update.effective_message.text
+        except:
+            message = None
+
         t = time.perf_counter_ns()
 
         result = func(update, context)
@@ -53,7 +58,8 @@ def process_request(func):
             elapsed_ms=elapsed_ms,
             user=user_db,
             chat=chat_db,
-            quote=quote_db
+            quote=quote_db,
+            message=message,
         )
 
         return result
