@@ -27,6 +27,23 @@ from db_utils import process_request, get_user_message_repr, catch_error, do_bac
 from third_party import bash_im
 
 
+def composed(*decs):
+    def deco(f):
+        for dec in reversed(decs):
+            f = dec(f)
+        return f
+    return deco
+
+
+def mega_process(func):
+    return composed(
+        run_async,
+        catch_error(log),
+        process_request,
+        log_func(log),
+    )(func)
+
+
 def get_random_quote(update: Update, context: CallbackContext) -> db.Quote:
     user_id = update.effective_user.id
 
@@ -58,26 +75,17 @@ def get_quote_id(context: CallbackContext) -> Optional[int]:
     return quote_id
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_start(update: Update, context: CallbackContext):
     reply_help(update, context)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_help(update: Update, context: CallbackContext):
     reply_help(update, context)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_request(update: Update, context: CallbackContext):
     quote = get_random_quote(update, context)
 
@@ -97,10 +105,7 @@ def on_request(update: Update, context: CallbackContext):
     return quote
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
     quote_id = get_quote_id(context)
     if not quote_id:
@@ -116,10 +121,7 @@ def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
     reply_info(text, update, context)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_get_user_stats(update: Update, context: CallbackContext):
     user = db.User.get_from(update.effective_user)
 
@@ -141,10 +143,7 @@ def on_get_user_stats(update: Update, context: CallbackContext):
     update.effective_message.reply_html(text)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_get_admin_stats(update: Update, context: CallbackContext):
     quote_count = db.Quote.select().count()
     quote_with_comics_count = db.Quote.get_all_with_comics().count()
@@ -160,10 +159,7 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
     update.effective_message.reply_html(text)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_get_quote_stats(update: Update, context: CallbackContext):
     quote_count = db.Quote.select().count()
     quote_with_comics_count = db.Quote.get_all_with_comics().count()
@@ -183,10 +179,7 @@ def on_get_quote_stats(update: Update, context: CallbackContext):
     update.effective_message.reply_html(text)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_get_users(update: Update, context: CallbackContext):
     try:
         if context.match and context.match.groups():
@@ -205,10 +198,7 @@ def on_get_users(update: Update, context: CallbackContext):
     update.effective_message.reply_text(text)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_get_quote(update: Update, context: CallbackContext):
     quote_id = get_quote_id(context)
     if not quote_id:
@@ -224,10 +214,7 @@ def on_get_quote(update: Update, context: CallbackContext):
     reply_quote(quote, update, context)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_get_external_quote(update: Update, context: CallbackContext):
     quote_id = get_quote_id(context)
     if not quote_id:
@@ -242,10 +229,7 @@ def on_get_external_quote(update: Update, context: CallbackContext):
     reply_quote(quote, update, context)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_update_quote(update: Update, context: CallbackContext):
     quote_id = get_quote_id(context)
     if not quote_id:
@@ -255,10 +239,7 @@ def on_update_quote(update: Update, context: CallbackContext):
     update_quote(quote_id, update, context)
 
 
-@run_async
-@catch_error(log)
-@process_request
-@log_func(log)
+@mega_process
 def on_callback_query(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
