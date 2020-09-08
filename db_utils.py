@@ -23,47 +23,50 @@ from common import reply_error
 from db import DB_DIR_NAME, User, Chat, Quote, Request, Error
 
 
-def process_request(func):
-    @functools.wraps(func)
-    def wrapper(update: Update, context: CallbackContext):
-        user_db = chat_db = quote_db = None
-        if update:
-            user = update.effective_user
-            chat = update.effective_chat
+def process_request(log: logging.Logger):
+    def actual_decorator(func):
+        @functools.wraps(func)
+        def wrapper(update: Update, context: CallbackContext):
+            user_db = chat_db = quote_db = None
+            if update:
+                user = update.effective_user
+                chat = update.effective_chat
 
-            user_db = User.get_from(user)
-            if user_db:
-                user_db.actualize(user)
+                user_db = User.get_from(user)
+                if user_db:
+                    user_db.actualize(user)
 
-            chat_db = Chat.get_from(chat)
-            if chat_db:
-                chat_db.actualize(chat)
+                chat_db = Chat.get_from(chat)
+                if chat_db:
+                    chat_db.actualize(chat)
 
-        try:
-            message = update.effective_message.text
-        except:
-            message = None
+            try:
+                message = update.effective_message.text
+            except:
+                message = None
 
-        t = time.perf_counter_ns()
+            t = time.perf_counter_ns()
+            result = func(update, context)
+            elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
 
-        result = func(update, context)
+            log.debug(f'[{func.__name__}] Elapsed {elapsed_ms} ms')
 
-        elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
+            if isinstance(result, Quote):
+                quote_db = result
 
-        if isinstance(result, Quote):
-            quote_db = result
+            Request.create(
+                func_name=func.__name__,
+                elapsed_ms=elapsed_ms,
+                user=user_db,
+                chat=chat_db,
+                quote=quote_db,
+                message=message,
+            )
 
-        Request.create(
-            func_name=func.__name__,
-            elapsed_ms=elapsed_ms,
-            user=user_db,
-            chat=chat_db,
-            quote=quote_db,
-            message=message,
-        )
+            return result
 
-        return result
-    return wrapper
+        return wrapper
+    return actual_decorator
 
 
 def catch_error(log: logging.Logger):

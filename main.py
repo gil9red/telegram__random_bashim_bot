@@ -39,7 +39,7 @@ def mega_process(func):
     return composed(
         run_async,
         catch_error(log),
-        process_request,
+        process_request(log),
         log_func(log),
     )(func)
 
