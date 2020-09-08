@@ -66,14 +66,14 @@ def process_request(func):
     return wrapper
 
 
-def catch_error(logger: logging.Logger):
+def catch_error(log: logging.Logger):
     def actual_decorator(func):
         @functools.wraps(func)
         def wrapper(update: Update, context: CallbackContext):
             try:
                 return func(update, context)
             except Exception as e:
-                logger.exception('Error: %s\nUpdate: %s', context.error, update)
+                log.exception('Error: %s\nUpdate: %s', context.error, update)
 
                 Error.create_from(func, e, update)
 
@@ -97,14 +97,14 @@ def get_user_message_repr(user: User) -> str:
     '''.rstrip()
 
 
-def db_create_backup(logger: logging.Logger, backup_dir='backup', date_fmt='%d%m%y'):
+def db_create_backup(log: logging.Logger, backup_dir='backup', date_fmt='%d%m%y'):
     backup_path = Path(backup_dir)
     backup_path.mkdir(parents=True, exist_ok=True)
 
     zip_name = DT.datetime.today().strftime(date_fmt)
     zip_name = backup_path / zip_name
 
-    logger.debug(f'Doing create backup in: {zip_name}')
+    log.debug(f'Doing create backup in: {zip_name}')
 
     shutil.make_archive(
         zip_name,
@@ -113,13 +113,13 @@ def db_create_backup(logger: logging.Logger, backup_dir='backup', date_fmt='%d%m
     )
 
 
-def do_backup(logger: logging.Logger):
+def do_backup(log: logging.Logger):
     # Каждую неделю, в пятницу, в 02:00
     schedule\
         .every().week\
         .friday.at("02:00")\
         .do(
-            lambda: db_create_backup(logger)
+            lambda: db_create_backup(log)
         )
 
     while True:
