@@ -266,6 +266,10 @@ def reply_help(update: Update, context: CallbackContext):
  - /admin_stats
  - admin[ _]stats или статистика[ _]админа
 
+Получение статистики по цитатам:
+ - /quote_stats
+ - quote[ _]stats или статистика[ _]цитат
+
 Получение порядка вызова указанной цитаты у текущего пользователя:
  - /get_used_quote
  - get[ _]used[ _]quote (\d+) или (\d+)

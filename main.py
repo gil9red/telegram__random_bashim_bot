@@ -128,11 +128,12 @@ def on_get_user_stats(update: Update, context: CallbackContext):
     elapsed_days = (last_request.date_time - first_request.date_time).days
 
     text = f'''\
-<b>Статистика:</b>
-    Получено цитат: {user.get_total_quotes()}
-    Среди них с комиксами: {user.get_total_quotes(with_comics=True)}
-    Всего запросов боту: {user.requests.count()}
-    Разница между первым и последним запросом: {elapsed_days} дней
+<b>Статистика.</b>
+
+Получено цитат: {user.get_total_quotes()}
+Среди них с комиксами: {user.get_total_quotes(with_comics=True)}
+Всего запросов боту: {user.requests.count()}
+Разница между первым и последним запросом: {elapsed_days} дней
     '''
 
     update.effective_message.reply_html(text)
@@ -146,16 +147,34 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
     quote_count = db.Quote.select().count()
     quote_with_comics_count = db.Quote.get_all_with_comics().count()
 
+    text = f'''\
+<b>Статистика админа.</b>
+
+Пользователей: {db.User.select().count()}
+Запросов: {db.Request.select().count()}
+Цитат <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>
+    '''
+
+    update.effective_message.reply_html(text)
+
+
+@run_async
+@catch_error(log)
+@process_request
+@log_func(log)
+def on_get_quote_stats(update: Update, context: CallbackContext):
+    quote_count = db.Quote.select().count()
+    quote_with_comics_count = db.Quote.get_all_with_comics().count()
+
     text_year_by_counts = "\n".join(
-        f'        {year}: {count}'
+        f'    <b>{year}</b>: {count}'
         for year, count in db.Quote.get_year_by_counts()
     )
 
     text = f'''\
-<b>Статистика админа:</b>
-    Пользователей: {db.User.select().count()}
-    Запросов: {db.Request.select().count()}
-    Цитат {quote_count}, с комиксами {quote_with_comics_count}:
+<b>Статистика по цитатам.</b>
+
+Всего <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>:
 {text_year_by_counts}
     '''
 
@@ -315,6 +334,15 @@ def main():
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^admin[ _]stats$|^статистика[ _]админа$'),
             on_get_admin_stats
+        )
+    )
+
+    # Возвращение статистики цитат
+    dp.add_handler(CommandHandler('quote_stats', on_get_quote_stats, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^quote[ _]stats$|^статистика[ _]цитат$'),
+            on_get_quote_stats
         )
     )
 
