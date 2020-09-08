@@ -127,11 +127,13 @@ def on_get_user_stats(update: Update, context: CallbackContext):
     last_request = user.requests.order_by(db.Request.id.desc()).first()
     elapsed_days = (last_request.date_time - first_request.date_time).days
 
+    quote_count = user.get_total_quotes()
+    quote_with_comics_count = user.get_total_quotes(with_comics=True)
+
     text = f'''\
 <b>Статистика.</b>
 
-Получено цитат: {user.get_total_quotes()}
-Среди них с комиксами: {user.get_total_quotes(with_comics=True)}
+Получено цитат <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>
 Всего запросов боту: {user.requests.count()}
 Разница между первым и последним запросом: {elapsed_days} дней
     '''
