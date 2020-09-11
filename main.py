@@ -240,7 +240,7 @@ def on_update_quote(update: Update, context: CallbackContext):
 
 
 @mega_process
-def on_callback_query(update: Update, context: CallbackContext):
+def on_quote_comics(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
 
@@ -377,7 +377,7 @@ def main():
     )
 
     dp.add_handler(MessageHandler(Filters.text, on_request))
-    dp.add_handler(CallbackQueryHandler(on_callback_query))
+    dp.add_handler(CallbackQueryHandler(on_quote_comics, pattern=r'^\d+$'))
 
     # Handle all errors
     dp.add_error_handler(on_error)
