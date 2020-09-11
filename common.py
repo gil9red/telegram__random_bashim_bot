@@ -87,9 +87,15 @@ def log_func(log: logging.Logger):
                 except:
                     message = ''
 
+                try:
+                    query_data = update.callback_query.data
+                except:
+                    query_data = ''
+
                 msg = f'[chat_id={chat_id}, user_id={user_id}, ' \
                       f'first_name={first_name!r}, last_name={last_name!r}, ' \
-                      f'username={username!r}, language_code={language_code}, message={message!r}]'
+                      f'username={username!r}, language_code={language_code}, ' \
+                      f'message={message!r}, query_data={query_data!r}]'
                 msg = func.__name__ + msg
 
                 log.debug(msg)
