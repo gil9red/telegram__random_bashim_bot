@@ -6,7 +6,7 @@ __author__ = 'ipetrash'
 
 import datetime as DT
 import time
-from typing import List, Optional, Union, Callable, Tuple
+from typing import List, Optional, Union, Callable, Tuple, Dict
 import traceback
 
 # pip install peewee
@@ -87,6 +87,24 @@ class BaseModel(Model):
         return self.__class__.__name__ + '(' + ', '.join(fields) + ')'
 
 
+class Settings(BaseModel):
+    years_of_quotes = TextField(default='')
+
+    def get_years_of_quotes(self) -> List[int]:
+        if not self.years_of_quotes:
+            return []
+
+        return list(map(int, self.years_of_quotes.split(',')))
+
+    def set_years_of_quotes(self, items: List[int]):
+        text = ','.join(map(str, sorted(items)))
+        if text == self.years_of_quotes:
+            return
+
+        self.years_of_quotes = text
+        self.save()
+
+
 # SOURCE: https://core.telegram.org/bots/api#user
 class User(BaseModel):
     first_name = TextField()
@@ -94,6 +112,7 @@ class User(BaseModel):
     username = TextField(null=True)
     language_code = TextField(null=True)
     last_activity = DateTimeField(default=DT.datetime.now)
+    settings = ForeignKeyField(Settings, null=True)
 
     def actualize(self, user: Optional[telegram.User]):
         self.first_name = user.first_name
@@ -128,6 +147,25 @@ class User(BaseModel):
         return Quote.get_all_with_comics(
             where=Quote.id.in_(query)
         ).count()
+
+    def get_years_of_quotes(self) -> Dict[int, bool]:
+        years = {x: False for x in Quote.get_years()}
+        if self.settings:
+            for x in self.settings.get_years_of_quotes():
+                years[x] = True
+
+        return years
+
+    def set_years_of_quotes(self, data: Dict[int, bool]):
+        years = [year for year, is_selected in data.items() if is_selected]
+        if not years and not self.settings:
+            return
+
+        if not self.settings:
+            self.settings = Settings.create()
+            self.save(only=[User.settings])
+
+        self.settings.set_years_of_quotes(years)
 
 
 # SOURCE: https://core.telegram.org/bots/api#chat
@@ -225,13 +263,24 @@ class Quote(BaseModel):
         return list(cls.select().order_by(fn.Random()).limit(limit))
 
     @classmethod
-    def get_user_unique_random(cls, user_id: Union[int, User], limit=20, ignored_last_quotes=IGNORED_LAST_QUOTES) -> List['Quote']:
+    def get_user_unique_random(
+            cls,
+            user_id: Union[int, User],
+            years: List[int] = None,
+            limit=20,
+            ignored_last_quotes=IGNORED_LAST_QUOTES
+    ) -> List['Quote']:
         # Last {ignored_last_quotes} returned quote's
         sub_query = Request.get_all_quote_id_by_user(user_id, ignored_last_quotes)
 
+        where = cls.id.not_in(sub_query)
+        if years:
+            fn_year = fn.strftime('%Y', cls.date).cast('INTEGER')
+            where = where & fn_year.in_(years)
+
         query = (
             cls.select()
-            .where(cls.id.not_in(sub_query))
+            .where(where)
             .order_by(fn.Random())
             .limit(limit)
         )
@@ -262,6 +311,19 @@ class Quote(BaseModel):
         )
 
         return [(row.year, row.count) for row in query]
+
+    @classmethod
+    def get_years(cls) -> List[int]:
+        fn_year = fn.strftime('%Y', cls.date).cast('INTEGER')
+        query = (
+            cls
+            .select(
+                fn_year.alias('year')
+            )
+            .distinct()
+            .order_by(fn_year)
+        )
+        return [row.year for row in query]
 
     def __str__(self):
         return self.__class__.__name__ + \
@@ -347,13 +409,23 @@ class Error(BaseModel):
 
 
 db.connect()
-db.create_tables([User, Chat, Quote, Comics, Request])
+db.create_tables([User, Chat, Quote, Comics, Request, Settings])
 
 db_error.connect()
 db_error.create_tables([Error])
 
 
 if __name__ == '__main__':
+    from config import ADMIN_USERNAME
+    admin = User.get(User.username == ADMIN_USERNAME[1:])
+    print('Admin:', admin)
+    # print(*Quote.get_user_unique_random(admin, limit=5), sep='\n')
+    # print(*Quote.get_user_unique_random(admin, years=[2004], limit=5), sep='\n')
+    # print(admin.get_years_of_quotes())
+    # admin.set_years_of_quotes({k: True for k in [2004, 2007, 2010]})
+    # print(admin.get_years_of_quotes())
+    print()
+
     print('Total users:', User.select().count())
     print('Total chats:', Chat.select().count())
 
@@ -370,9 +442,11 @@ if __name__ == '__main__':
     print()
 
     print('Total quotes:', Quote.select().count())
-
     for year, count in Quote.get_year_by_counts():
         print(f'    {year}: {count}')
+
+    print()
+    print("Years of quotes:", Quote.get_years())
 
     print()
 

@@ -253,6 +253,10 @@ def reply_help(update: Update, context: CallbackContext):
  - /help
  - help или помощь
 
+Вызов настроек:
+ - /settings
+ - settings или настройки
+
 Получение статистики текущего пользователя:
  - /stats
  - stats или статистика
