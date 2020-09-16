@@ -9,14 +9,20 @@ from random import randint
 import time
 
 from common import update_quote
-from db import Quote
+from db import Quote, fn
 
-
+i = 0
 for quote in Quote.select().where(
     Quote.modification_date <= DT.date(2020, 9, 6)
-):
-    update_quote(quote.id)
+).order_by(fn.Random()):
+    i += 1
+    while True:
+        try:
+            print(i, quote.id)
+            update_quote(quote.id)
+            break
+        except:
+            time.sleep(60)
 
-    # 5 - 20
-    seconds = randint(5, 20)
+    seconds = randint(20, 60)
     time.sleep(seconds)
