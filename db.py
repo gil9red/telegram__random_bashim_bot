@@ -27,6 +27,8 @@ DB_FILE_NAME = str(DB_DIR_NAME / 'database.sqlite')
 
 DB_DIR_NAME.mkdir(parents=True, exist_ok=True)
 
+BACKUP_DIR_NAME = DIR / 'backup'
+
 
 DB_DIR_NAME_ERROR = DIR / 'database_error'
 DB_FILE_NAME_ERROR = str(DB_DIR_NAME_ERROR / 'database_error.sqlite')

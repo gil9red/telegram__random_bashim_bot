@@ -20,7 +20,7 @@ import schedule
 
 from config import ERROR_TEXT
 from common import reply_error
-from db import DB_DIR_NAME, User, Chat, Quote, Request, Error
+from db import DB_DIR_NAME, BACKUP_DIR_NAME, User, Chat, Quote, Request, Error
 
 
 def process_request(log: logging.Logger):
@@ -100,7 +100,7 @@ def get_user_message_repr(user: User) -> str:
     '''.rstrip()
 
 
-def db_create_backup(log: logging.Logger, backup_dir='backup', date_fmt='%d%m%y'):
+def db_create_backup(log: logging.Logger, backup_dir=BACKUP_DIR_NAME, date_fmt='%d%m%y'):
     backup_path = Path(backup_dir)
     backup_path.mkdir(parents=True, exist_ok=True)
 
