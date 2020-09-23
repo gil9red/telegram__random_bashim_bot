@@ -23,8 +23,8 @@ import db
 from config import TOKEN, ERROR_TEXT, DIR_COMICS
 from common import (
     log, log_func, download_random_quotes, download_main_page_quotes,
-    REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, update_quote,
-    reply_help, reply_error, reply_quote, reply_info
+    REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
+    update_quote, reply_help, reply_error, reply_quote, reply_info
 )
 from db_utils import process_request, get_user_message_repr, catch_error, do_backup
 from third_party import bash_im
@@ -206,6 +206,11 @@ def on_start(update: Update, context: CallbackContext):
 
 @mega_process
 def on_help(update: Update, context: CallbackContext):
+    """
+    Получение помощи по командам:
+     - /help
+     - help или помощь
+    """
     reply_help(update, context)
 
 
@@ -241,6 +246,12 @@ def on_request(update: Update, context: CallbackContext):
 
 @mega_process
 def on_settings(update: Update, context: CallbackContext):
+    """
+    Вызов настроек:
+     - /settings
+     - settings или настройки
+    """
+
     # Если функция вызывана из CallbackQueryHandler
     query = update.callback_query
     if query:
@@ -270,6 +281,12 @@ def on_settings_year(update: Update, context: CallbackContext):
 
 @mega_process
 def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
+    r"""
+    Получение порядка вызова указанной цитаты у текущего пользователя:
+     - /get_used_quote
+     - get[ _]used[ _]quote (\d+) или (\d+)
+    """
+
     quote_id = get_quote_id(context)
     if not quote_id:
         reply_error('Номер цитаты не указан', update, context)
@@ -286,6 +303,12 @@ def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
 
 @mega_process
 def on_get_user_stats(update: Update, context: CallbackContext):
+    """
+    Получение статистики текущего пользователя:
+     - /stats
+     - stats или статистика
+    """
+
     user = db.User.get_from(update.effective_user)
 
     first_request = user.requests.first()
@@ -308,6 +331,12 @@ def on_get_user_stats(update: Update, context: CallbackContext):
 
 @mega_process
 def on_get_admin_stats(update: Update, context: CallbackContext):
+    """
+    Получение статистики админа:
+     - /admin_stats
+     - admin[ _]stats или статистика[ _]админа
+    """
+
     quote_count = db.Quote.select().count()
     quote_with_comics_count = db.Quote.get_all_with_comics().count()
 
@@ -324,6 +353,12 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
 
 @mega_process
 def on_get_quote_stats(update: Update, context: CallbackContext):
+    """
+    Получение статистики по цитатам:
+     - /quote_stats
+     - quote[ _]stats или статистика[ _]цитат
+    """
+
     quote_count = db.Quote.select().count()
     quote_with_comics_count = db.Quote.get_all_with_comics().count()
 
@@ -344,6 +379,12 @@ def on_get_quote_stats(update: Update, context: CallbackContext):
 
 @mega_process
 def on_get_users(update: Update, context: CallbackContext):
+    r"""
+    Получение пользователей:
+     - /get_users
+     - get[ _]users (\d+)
+    """
+
     try:
         if context.match and context.match.groups():
             limit = int(context.match.group(1))
@@ -363,6 +404,12 @@ def on_get_users(update: Update, context: CallbackContext):
 
 @mega_process
 def on_get_quote(update: Update, context: CallbackContext):
+    """
+    Получение цитаты из базы:
+     - /get_quote <номер цитаты>
+     - get quote <номер цитаты>
+    """
+
     quote_id = get_quote_id(context)
     if not quote_id:
         reply_error('Номер цитаты не указан', update, context)
@@ -379,6 +426,12 @@ def on_get_quote(update: Update, context: CallbackContext):
 
 @mega_process
 def on_get_external_quote(update: Update, context: CallbackContext):
+    """
+    Получение цитаты из сайта:
+     - /get_external_quote <номер цитаты>
+     - get external quote <номер цитаты>
+    """
+
     quote_id = get_quote_id(context)
     if not quote_id:
         reply_error('Номер цитаты не указан', update, context)
@@ -394,6 +447,12 @@ def on_get_external_quote(update: Update, context: CallbackContext):
 
 @mega_process
 def on_update_quote(update: Update, context: CallbackContext):
+    r"""
+    Обновление цитаты в базе с сайта:
+     - /update_quote
+     - update[ _]quote (\d+)
+    """
+
     quote_id = get_quote_id(context)
     if not quote_id:
         reply_error('Номер цитаты не указан', update, context)
@@ -551,6 +610,8 @@ def main():
 
     dp.add_handler(MessageHandler(Filters.text, on_request))
     dp.add_handler(CallbackQueryHandler(on_quote_comics, pattern=r'^\d+$'))
+
+    fill_commands_for_help(dp)
 
     # Handle all errors
     dp.add_error_handler(on_error)

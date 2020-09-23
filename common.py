@@ -12,11 +12,12 @@ import time
 import sys
 from pathlib import Path
 from random import randint
-from typing import Union
+from typing import Union, Optional
 from threading import RLock
 
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import CallbackContext, Filters
+from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filters
+from telegram.ext.filters import MergedFilter
 
 # pip install schedule
 import schedule
@@ -52,6 +53,34 @@ def get_logger(file_name: str, dir_name='logs'):
     return log
 
 
+def has_admin_filter(filter_handler) -> bool:
+    if filter_handler is FILTER_BY_ADMIN:
+        return True
+
+    if isinstance(filter_handler, MergedFilter):
+        return any([
+            has_admin_filter(filter_handler.base_filter),
+            has_admin_filter(filter_handler.and_filter),
+            has_admin_filter(filter_handler.or_filter),
+        ])
+
+    return False
+
+
+def get_doc(obj) -> Optional[str]:
+    if not obj or not obj.__doc__:
+        return
+
+    items = []
+    for line in obj.__doc__.splitlines():
+        if line.startswith('    '):
+            line = line[4:]
+
+        items.append(line)
+
+    return '\n'.join(items).strip()
+
+
 REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
     [[TEXT_BUTTON_MORE]], resize_keyboard=True
 )
@@ -63,6 +92,28 @@ log = get_logger(Path(__file__).resolve().parent.name)
 
 # Для препятствия одновременной работы в download_random_quotes и download_new_quotes
 lock = RLock()
+
+
+COMMON_COMMANDS = []
+ADMIN_COMMANDS = []
+
+
+def fill_commands_for_help(dispatcher):
+    for commands in dispatcher.handlers.values():
+        for command in commands:
+            if not isinstance(command, (CommandHandler, MessageHandler)):
+                continue
+
+            help_command = get_doc(command.callback)
+            if not help_command:
+                continue
+
+            if has_admin_filter(command.filters):
+                if help_command not in ADMIN_COMMANDS:
+                    ADMIN_COMMANDS.append(help_command)
+            else:
+                if help_command not in COMMON_COMMANDS:
+                    COMMON_COMMANDS.append(help_command)
 
 
 def log_func(log: logging.Logger):
@@ -240,58 +291,13 @@ def get_html_message(quote: Union[bash_im.Quote, db.Quote]) -> str:
     return f'{text}\n\n{footer}'
 
 
-# TODO: генерировать список команд из обработчика
-#       описание команды можно сделать в функции как docstring
 def reply_help(update: Update, context: CallbackContext):
     username = update.effective_user.username
     is_admin = username == ADMIN_USERNAME[1:]
 
-    text = HELP_TEXT + '\n'
-
-    text += """
-Получение помощи по командам:
- - /help
- - help или помощь
-
-Вызов настроек:
- - /settings
- - settings или настройки
-
-Получение статистики текущего пользователя:
- - /stats
- - stats или статистика
-
-Получение цитаты из базы:
- - /get_quote <номер цитаты>
- - get quote <номер цитаты>
- 
-Получение цитаты из сайта:
- - /get_external_quote <номер цитаты>
- - get external quote <номер цитаты>
-    """
-
+    text = HELP_TEXT + '\n\n' + '\n\n'.join(COMMON_COMMANDS)
     if is_admin:
-        text += r"""
-Получение статистики админа:
- - /admin_stats
- - admin[ _]stats или статистика[ _]админа
-
-Получение статистики по цитатам:
- - /quote_stats
- - quote[ _]stats или статистика[ _]цитат
-
-Получение порядка вызова указанной цитаты у текущего пользователя:
- - /get_used_quote
- - get[ _]used[ _]quote (\d+) или (\d+)
-
-Получение пользователей:
- - /get_users
- - get[ _]users (\d+)
- 
-Обновление цитаты в базе с сайта:
- - /update_quote
- - update[ _]quote (\d+)
-    """
+        text += '\n\n' + '\n\n'.join(ADMIN_COMMANDS)
 
     update.effective_message.reply_text(
         text,
