@@ -15,7 +15,7 @@ from random import randint
 from typing import Union, Optional
 from threading import RLock
 
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filters
 from telegram.ext.filters import MergedFilter
 
@@ -93,6 +93,8 @@ log = get_logger(Path(__file__).resolve().parent.name)
 # Для препятствия одновременной работы в download_random_quotes и download_new_quotes
 lock = RLock()
 
+BUTTON_HELP_COMMON = InlineKeyboardButton('⬅️ Общие команды', callback_data='help_common')
+BUTTON_HELP_ADMIN = InlineKeyboardButton('Команды админа ➡️', callback_data='help_admin')
 
 COMMON_COMMANDS = []
 ADMIN_COMMANDS = []
@@ -292,17 +294,37 @@ def get_html_message(quote: Union[bash_im.Quote, db.Quote]) -> str:
 
 
 def reply_help(update: Update, context: CallbackContext):
+    query = update.callback_query
+    message = update.effective_message
+    query_data = None
+
+    # Если функция вызвана из CallbackQueryHandler
+    if query:
+        query.answer()
+        query_data = query.data
+
     username = update.effective_user.username
     is_admin = username == ADMIN_USERNAME[1:]
 
-    text = HELP_TEXT + '\n\n' + '\n\n'.join(COMMON_COMMANDS)
-    if is_admin:
-        text += '\n\n' + '\n\n'.join(ADMIN_COMMANDS)
+    show_common_help = True
+    if query_data:
+        show_common_help = query_data.endswith('common')
 
-    update.effective_message.reply_text(
-        text,
-        reply_markup=REPLY_KEYBOARD_MARKUP
-    )
+    text_common = HELP_TEXT + '\n\n' + '\n\n'.join(COMMON_COMMANDS)
+    text_admin = '\n\n'.join(ADMIN_COMMANDS)
+
+    if is_admin:
+        text = text_common if show_common_help else text_admin
+        next_button = BUTTON_HELP_ADMIN if show_common_help else BUTTON_HELP_COMMON
+        reply_markup = InlineKeyboardMarkup.from_button(next_button)
+    else:
+        text = text_common
+        reply_markup = REPLY_KEYBOARD_MARKUP
+
+    if query:
+        message.edit_text(text, reply_markup=reply_markup)
+    else:
+        message.reply_text(text, reply_markup=reply_markup)
 
 
 def reply_error(text: str, update: Update, context: CallbackContext):

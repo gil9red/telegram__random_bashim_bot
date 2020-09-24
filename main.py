@@ -24,7 +24,8 @@ from config import TOKEN, ERROR_TEXT, DIR_COMICS
 from common import (
     log, log_func, download_random_quotes, download_main_page_quotes,
     REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
-    update_quote, reply_help, reply_error, reply_quote, reply_info
+    update_quote, reply_help, reply_error, reply_quote, reply_info,
+    BUTTON_HELP_COMMON, BUTTON_HELP_ADMIN,
 )
 from db_utils import process_request, get_user_message_repr, catch_error, do_backup
 from third_party import bash_im
@@ -211,6 +212,7 @@ def on_help(update: Update, context: CallbackContext):
      - /help
      - help или помощь
     """
+
     reply_help(update, context)
 
 
@@ -252,7 +254,7 @@ def on_settings(update: Update, context: CallbackContext):
      - settings или настройки
     """
 
-    # Если функция вызывана из CallbackQueryHandler
+    # Если функция вызвана из CallbackQueryHandler
     query = update.callback_query
     if query:
         query.answer()
@@ -519,6 +521,11 @@ def main():
         MessageHandler(
             Filters.regex(r'(?i)^help$|^помощь$'),
             on_help
+        )
+    )
+    dp.add_handler(
+        CallbackQueryHandler(
+            on_help, pattern=f"^{BUTTON_HELP_COMMON.callback_data}|{BUTTON_HELP_ADMIN.callback_data}$"
         )
     )
 
