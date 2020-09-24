@@ -142,6 +142,10 @@ def log_func(log: logging.Logger):
 
                 try:
                     query_data = update.callback_query.data
+
+                    # Содержит текущий текст сообщения, под которым была inline-кнопка
+                    # Нет смысла логировать этот текст
+                    message = '<hidden>'
                 except:
                     query_data = ''
 
