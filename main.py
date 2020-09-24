@@ -22,13 +22,12 @@ from telegram.ext.dispatcher import run_async
 import db
 from config import TOKEN, ERROR_TEXT, DIR_COMICS
 from common import (
-    log, log_func, download_random_quotes, download_main_page_quotes,
-    REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
+    log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
     update_quote, reply_help, reply_error, reply_quote, reply_info,
     BUTTON_HELP_COMMON, BUTTON_HELP_ADMIN,
 )
 from db_utils import process_request, get_user_message_repr, catch_error, do_backup
-from third_party import bash_im
+from parsers import bash_im, download_random_quotes, download_main_page_quotes, download_seq_page_quotes
 
 
 def composed(*decs):
@@ -637,6 +636,9 @@ def main():
 if __name__ == '__main__':
     thread_download_main_page_quotes = Thread(target=download_main_page_quotes, args=[log, DIR_COMICS])
     thread_download_main_page_quotes.start()
+
+    thread_download_seq_page_quotes = Thread(target=download_seq_page_quotes, args=[log, DIR_COMICS])
+    thread_download_seq_page_quotes.start()
 
     thread_download_random_quotes = Thread(target=download_random_quotes, args=[log, DIR_COMICS])
     thread_download_random_quotes.start()

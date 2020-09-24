@@ -17,8 +17,8 @@ from playhouse.sqliteq import SqliteQueueDatabase
 
 import telegram
 
-from third_party import bash_im
-from third_party.bash_im import shorten
+from parsers import bash_im
+from parsers.bash_im import shorten
 from config import DIR, IGNORED_LAST_QUOTES
 
 

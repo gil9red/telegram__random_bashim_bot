@@ -8,23 +8,17 @@ import datetime as DT
 import functools
 import html
 import logging
-import time
 import sys
 from pathlib import Path
-from random import randint
 from typing import Union, Optional
-from threading import RLock
 
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filters
 from telegram.ext.filters import MergedFilter
 
-# pip install schedule
-import schedule
-
 import db
 from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS
-from third_party import bash_im
+from parsers import bash_im
 
 
 def get_logger(file_name: str, dir_name='logs'):
@@ -87,17 +81,13 @@ REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
 
 FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
 
-
-log = get_logger(Path(__file__).resolve().parent.name)
-
-# Для препятствия одновременной работы в download_random_quotes и download_new_quotes
-lock = RLock()
-
 BUTTON_HELP_COMMON = InlineKeyboardButton('⬅️ Общие команды', callback_data='help_common')
 BUTTON_HELP_ADMIN = InlineKeyboardButton('Команды админа ➡️', callback_data='help_admin')
 
 COMMON_COMMANDS = []
 ADMIN_COMMANDS = []
+
+log = get_logger(Path(__file__).resolve().parent.name)
 
 
 def fill_commands_for_help(dispatcher):
@@ -161,88 +151,6 @@ def log_func(log: logging.Logger):
 
         return wrapper
     return actual_decorator
-
-
-def download_random_quotes(log: logging.Logger, dir_comics):
-    i = 0
-
-    while True:
-        try:
-            with lock:
-                count = db.Quote.select().count()
-                log.debug(f'{download_random_quotes.__name__}. Now quotes: {count}')
-                t = time.perf_counter_ns()
-
-                for quote in bash_im.get_random_quotes(log):
-                    # При отсутствии, цитата будет добавлена в базу
-                    db.Quote.get_from(quote)
-
-                    # Сразу же пробуем скачать комиксы
-                    quote.download_comics(dir_comics)
-
-                elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
-                log.debug(
-                    'Added new quotes (random): %s, elapsed %s ms',
-                    db.Quote.select().count() - count, elapsed_ms
-                )
-
-        except:
-            log.exception('')
-
-        finally:
-            # 3 - 15 minutes
-            minutes = randint(3, 15)
-            log.debug('Mini sleep: %s minutes', minutes)
-
-            time.sleep(minutes * 60)
-
-            i += 1
-            if i == 20:
-                i = 0
-
-                # 3 - 6 hours
-                minutes = randint(3 * 60, 6 * 60)
-                log.debug('Deep sleep: %s minutes', minutes)
-
-                time.sleep(minutes * 60)
-
-
-def download_main_page_quotes(log: logging.Logger, dir_comics):
-    def run():
-        while True:
-            try:
-                with lock:
-                    count = db.Quote.select().count()
-                    log.debug(f'{download_main_page_quotes.__name__}. Now quotes: {count}')
-                    t = time.perf_counter_ns()
-
-                    for quote in bash_im.get_main_page_quotes(log):
-                        # При отсутствии, цитата будет добавлена в базу
-                        db.Quote.get_from(quote)
-
-                        # Сразу же пробуем скачать комиксы
-                        quote.download_comics(dir_comics)
-
-                    elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
-                    log.debug(
-                        'Added new quotes (main page): %s, elapsed %s ms',
-                        db.Quote.select().count() - count, elapsed_ms
-                    )
-
-                break
-
-            except Exception:
-                log.exception('')
-
-                log.info("I'll try again in 1 minute ...")
-                time.sleep(60)
-
-    # Каждый день в 22:00
-    schedule.every().day.at("22:00").do(run)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
 
 
 def update_quote(quote_id: int, update: Update = None, context: CallbackContext = None):
