@@ -454,7 +454,7 @@ if __name__ == '__main__':
 
     limit = 3
     print(f"User's unique random quotes ({limit}):")
-    for quote in Quote.get_user_unique_random(first_user, limit=limit):
+    for quote in Quote.get_user_unique_random(admin, limit=limit):
         print(f'    {quote}')
 
     print()
@@ -462,26 +462,26 @@ if __name__ == '__main__':
     print('Quote.get_user_unique_random performance stats:')
     for limit in [100, 300, 500, 1000, 1500, 2000, 3000, 5000, 9999]:
         t = time.perf_counter()
-        Quote.get_user_unique_random(first_user, limit=limit)
+        Quote.get_user_unique_random(admin, limit=limit)
         print(f'    limit={limit:<4} elapsed {time.perf_counter() - t:.2f} secs')
 
     print()
 
     print('Request last:', Request.select().order_by(Request.id.desc()).first())
-    print('Total requests of first user:', User.select().first().requests.select().count())
+    print('Total requests of admin:', admin.requests.select().count())
     print()
 
     # Quotes with comics
-    print('Total quotes having comics of first user:', first_user.get_total_quotes(with_comics=True))
+    print('Total quotes having comics of admin:', admin.get_total_quotes(with_comics=True))
     print('Total quotes having comics:', Quote.get_all_with_comics().count())
     print()
 
     print('Random quote:', Quote.get_random(limit=1)[0])
     print()
 
-    sub_query = Request.get_all_quote_id_by_user(first_user)
+    sub_query = Request.get_all_quote_id_by_user(admin)
     items = [x.quote_id for x in sub_query]
-    quote_id = 429385
+    quote_id = 102776
     print(
         f'Quote #{quote_id} found in', [i for i, x in enumerate(items) if x == quote_id]
     )
