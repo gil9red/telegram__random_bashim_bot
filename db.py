@@ -357,12 +357,12 @@ class Request(BaseModel):
     @classmethod
     def get_all_quote_id_by_user(cls, user_id: Union[int, User], ignored_last_quotes=-1) -> ModelSelect:
         query = (
-            Request
-            .select(Request.quote_id)
+            cls
+            .select(cls.quote_id)
             .where(
-                (Request.quote_id.is_null(False)) & (Request.user_id == user_id)
+                (cls.quote_id.is_null(False)) & (cls.user_id == user_id)
             )
-            .order_by(Request.id.desc())
+            .order_by(cls.id.desc())
         )
         if ignored_last_quotes > 0:
             query = query.limit(ignored_last_quotes)
