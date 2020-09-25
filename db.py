@@ -11,7 +11,7 @@ import traceback
 
 # pip install peewee
 from peewee import (
-    Model, TextField, ForeignKeyField, DateTimeField, DateField, IntegerField, fn, JOIN, ModelSelect
+    Model, TextField, ForeignKeyField, DateTimeField, DateField, IntegerField, fn, JOIN, ModelSelect, Field
 )
 from playhouse.sqliteq import SqliteQueueDatabase
 
@@ -355,10 +355,18 @@ class Request(BaseModel):
     message = TextField(null=True)
 
     @classmethod
-    def get_all_quote_id_by_user(cls, user_id: Union[int, User], ignored_last_quotes=-1) -> ModelSelect:
+    def get_all_quote_id_by_user(
+            cls,
+            user_id: Union[int, User],
+            ignored_last_quotes=-1,
+            fields: List[Field] = None
+    ) -> ModelSelect:
+        if not fields:
+            fields = [cls.quote_id]
+
         query = (
             cls
-            .select(cls.quote_id)
+            .select(*fields)
             .where(
                 (cls.quote_id.is_null(False)) & (cls.user_id == user_id)
             )
@@ -479,11 +487,14 @@ if __name__ == '__main__':
     print('Random quote:', Quote.get_random(limit=1)[0])
     print()
 
-    sub_query = Request.get_all_quote_id_by_user(admin)
-    items = [x.quote_id for x in sub_query]
+    sub_query = Request.get_all_quote_id_by_user(admin, fields=[Request.quote_id, Request.date_time])
     quote_id = 102776
+    items = [(i, x.date_time) for i, x in enumerate(sub_query) if x.quote_id == quote_id]
+    max_num_len = len(str(max(x[0] for x in items)))
+    str_template = '  #{:<' + str(max_num_len) + '} {:%d/%m/%Y}'
+    text = '\n'.join(str_template.format(num, date) for num, date in items)
     print(
-        f'Quote #{quote_id} found in', [i for i, x in enumerate(items) if x == quote_id]
+        f'Quote #{quote_id} found in:\n{text}'
     )
     print()
 
