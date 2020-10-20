@@ -4,6 +4,7 @@
 __author__ = 'ipetrash'
 
 
+import inspect
 import logging
 import time
 
@@ -32,18 +33,24 @@ def read_next_checked_page() -> int:
         return bash_im.get_total_pages()
 
 
+def caller_name() -> str:
+    """Return the calling function's name."""
+    return inspect.currentframe().f_back.f_code.co_name
+
+
 # Для препятствия одновременной работы в download_random_quotes и download_new_quotes
 lock = RLock()
 
 
 def download_random_quotes(log: logging.Logger, dir_comics):
+    prefix = f'[{caller_name()}]'
     i = 0
 
     while True:
         try:
             with lock:
                 count = db.Quote.select().count()
-                log.debug(f'{download_random_quotes.__name__}. Quotes: {count}')
+                log.debug(f'{prefix} Quotes: {count}')
                 t = time.perf_counter_ns()
 
                 for quote in bash_im.get_random_quotes(log):
@@ -55,17 +62,17 @@ def download_random_quotes(log: logging.Logger, dir_comics):
 
                 elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
                 log.debug(
-                    'Added new quotes (random): %s, elapsed %s ms',
+                    f'{prefix} Added new quotes (random): %s, elapsed %s ms',
                     db.Quote.select().count() - count, elapsed_ms
                 )
 
         except:
-            log.exception('')
+            log.exception(f'{prefix} Error:')
 
         finally:
             # 3 - 15 minutes
             minutes = randint(3, 15)
-            log.debug('Mini sleep: %s minutes', minutes)
+            log.debug(f'{prefix} Mini sleep: %s minutes', minutes)
 
             time.sleep(minutes * 60)
 
@@ -75,18 +82,20 @@ def download_random_quotes(log: logging.Logger, dir_comics):
 
                 # 3 - 6 hours
                 minutes = randint(3 * 60, 6 * 60)
-                log.debug('Deep sleep: %s minutes', minutes)
+                log.debug(f'{prefix} Deep sleep: %s minutes', minutes)
 
                 time.sleep(minutes * 60)
 
 
 def download_main_page_quotes(log: logging.Logger, dir_comics):
+    prefix = f'[{caller_name()}]'
+
     def run():
         while True:
             try:
                 with lock:
                     count = db.Quote.select().count()
-                    log.debug(f'{download_main_page_quotes.__name__}. Quotes: {count}')
+                    log.debug(f'{prefix} Quotes: {count}')
                     t = time.perf_counter_ns()
 
                     for quote in bash_im.get_main_page_quotes(log):
@@ -98,16 +107,16 @@ def download_main_page_quotes(log: logging.Logger, dir_comics):
 
                     elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
                     log.debug(
-                        'Added new quotes (main page): %s, elapsed %s ms',
+                        f'{prefix} Added new quotes (main page): %s, elapsed %s ms',
                         db.Quote.select().count() - count, elapsed_ms
                     )
 
                 break
 
             except Exception:
-                log.exception('')
+                log.exception(f'{prefix} Error:')
 
-                log.info("I'll try again in 1 minute ...")
+                log.info(f"{prefix} I'll try again in 1 minute ...")
                 time.sleep(60)
 
     # Каждый день в 22:00
@@ -119,6 +128,8 @@ def download_main_page_quotes(log: logging.Logger, dir_comics):
 
 
 def download_seq_page_quotes(log: logging.Logger, dir_comics):
+    prefix = f'[{caller_name()}]'
+
     while True:
         i = 0
         page = read_next_checked_page()
@@ -127,7 +138,7 @@ def download_seq_page_quotes(log: logging.Logger, dir_comics):
             try:
                 with lock:
                     count = db.Quote.select().count()
-                    log.debug(f'{download_seq_page_quotes.__name__}. Quotes: {count}')
+                    log.debug(f'{prefix} Quotes: {count}')
                     t = time.perf_counter_ns()
 
                     for quote in bash_im.get_page_quotes(page, log):
@@ -139,7 +150,7 @@ def download_seq_page_quotes(log: logging.Logger, dir_comics):
 
                     elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
                     log.debug(
-                        'Added new quotes (page %s): %s, elapsed %s ms',
+                        f'{prefix} Added new quotes (page %s): %s, elapsed %s ms',
                         page, db.Quote.select().count() - count, elapsed_ms
                     )
 
@@ -147,15 +158,15 @@ def download_seq_page_quotes(log: logging.Logger, dir_comics):
                 save_next_checked_page(page)
 
             except Exception:
-                log.exception('')
+                log.exception(f'{prefix} Error:')
 
-                log.info("I'll try again in 1 minute ...")
+                log.info(f"{prefix} I'll try again in 1 minute ...")
                 time.sleep(60)
 
             finally:
                 # 3 - 15 minutes
                 minutes = randint(3, 15)
-                log.debug('Mini sleep: %s minutes', minutes)
+                log.debug(f'{prefix} Mini sleep: %s minutes', minutes)
 
                 time.sleep(minutes * 60)
 
@@ -165,6 +176,6 @@ def download_seq_page_quotes(log: logging.Logger, dir_comics):
 
                     # 3 - 6 hours
                     minutes = randint(3 * 60, 6 * 60)
-                    log.debug('Deep sleep: %s minutes', minutes)
+                    log.debug(f'{prefix} Deep sleep: %s minutes', minutes)
 
                     time.sleep(minutes * 60)
