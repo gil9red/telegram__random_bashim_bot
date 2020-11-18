@@ -17,7 +17,7 @@ from telegram.ext import Dispatcher, MessageHandler, CommandHandler, Filters, Ca
 from telegram.ext.dispatcher import run_async
 
 import db
-from config import DIR_COMICS
+from config import DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY, LIMIT_UNIQUE_QUOTES
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
     update_quote, reply_help, reply_error, reply_quote, reply_info,
@@ -52,6 +52,7 @@ def is_equal_inline_keyboards(keyboard_1: InlineKeyboardMarkup, keyboard_2: Inli
 
 class SettingState(enum.Enum):
     YEAR = " ⁃ Фильтрация получения цитат по годам"
+    LIMIT = " ⁃ Количество получаемых уникальных цитат"
     MAIN = enum.auto()
 
     def get_callback_data(self) -> str:
@@ -65,9 +66,6 @@ class SettingState(enum.Enum):
             '^' + self.get_callback_data() + '$|' + self.get_pattern_with_params().pattern
         )
 
-
-CHECKBOX = '✅'
-CHECKBOX_EMPTY = '⬜'
 
 INLINE_KEYBOARD_BUTTON_BACK = InlineKeyboardButton(
     "<назад>", callback_data=SettingState.MAIN.get_callback_data()
@@ -143,16 +141,45 @@ def update_cache(
     if years:
         log.debug(f'Quotes from year(s): {", ".join(map(str, years))}.')
 
-    quotes += db.Quote.get_user_unique_random(user, years)
+    quotes += user.get_user_unique_random(years)
 
     log.debug(f'Finish [{update_cache.__name__}]. Quotes: {len(quotes)}')
+
+
+@mega_process
+def on_settings(update: Update, context: CallbackContext):
+    """
+    Вызов настроек:
+     - /settings
+     - settings или настройки
+    """
+
+    query = update.callback_query
+
+    # Если функция вызвана из CallbackQueryHandler
+    if query:
+        query.answer()
+
+    message = update.effective_message
+
+    reply_markup = InlineKeyboardMarkup.from_column([
+        InlineKeyboardButton(SettingState.YEAR.value, callback_data=SettingState.YEAR.get_callback_data()),
+        InlineKeyboardButton(SettingState.LIMIT.value, callback_data=SettingState.LIMIT.get_callback_data()),
+    ])
+
+    text = 'Выбор настроек:'
+
+    # Если функция вызвана из CallbackQueryHandler
+    if query:
+        message.edit_text(text, reply_markup=reply_markup)
+    else:
+        message.reply_text(text, reply_markup=reply_markup)
 
 
 def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext):
     query = update.callback_query
 
     settings = SettingState.YEAR
-    data = settings.get_callback_data()
 
     user = db.User.get_from(update.effective_user)
     years_of_quotes = user.get_years_of_quotes()
@@ -179,7 +206,7 @@ def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext
         update_cache(user, years_of_quotes, log, update, context)
 
     keys = list(years_of_quotes)
-
+    data = settings.get_callback_data()
     columns = 4
     buttons = []
     for i in range(0, len(keys), columns):
@@ -212,6 +239,71 @@ def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext
     query.edit_message_text(text, reply_markup=reply_markup)
 
 
+def _on_reply_limit(log: logging.Logger, update: Update, context: CallbackContext):
+    query = update.callback_query
+
+    settings = SettingState.LIMIT
+    user = db.User.get_from(update.effective_user)
+
+    # Если значение было передано
+    pattern = settings.get_pattern_with_params()
+    m = pattern.search(query.data)
+    if m:
+        data_limit = int(m.group(1))
+        if data_limit not in LIMIT_UNIQUE_QUOTES:
+            return
+
+        log.debug(f'    limit_unique_quotes = {data_limit}')
+
+        user.set_limit_unique_quotes(data_limit)
+
+    limit = user.get_limit_unique_quotes()
+    data = settings.get_callback_data()
+    columns = 3
+    buttons = []
+    for i in range(0, len(LIMIT_UNIQUE_QUOTES), columns):
+        row = []
+        for x in LIMIT_UNIQUE_QUOTES[i: i + columns]:
+            limit_str = str(x)
+            is_selected = limit_str == str(limit)
+
+            row.append(
+                InlineKeyboardButton(
+                    (RADIOBUTTON if is_selected else RADIOBUTTON_EMPTY) + ' ' + limit_str,
+                    callback_data=data + '_' + limit_str
+                )
+            )
+
+        buttons.append(row)
+
+    buttons.append([INLINE_KEYBOARD_BUTTON_BACK])
+
+    reply_markup = InlineKeyboardMarkup(buttons)
+
+    # Fix error: "telegram.error.BadRequest: Message is not modified"
+    if is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
+        return
+
+    text = 'Количество уникальных цитат:'
+    query.edit_message_text(text, reply_markup=reply_markup)
+
+
+@mega_process
+def on_settings_year(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    _on_reply_year(log, update, context)
+
+
+@mega_process
+def on_settings_limit(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    _on_reply_limit(log, update, context)
+
+
 @mega_process
 def on_request(update: Update, context: CallbackContext):
     quote = get_random_quote(update, context)
@@ -240,41 +332,6 @@ def on_request(update: Update, context: CallbackContext):
     reply_quote(quote, update, context, reply_markup)
 
     return quote
-
-
-@mega_process
-def on_settings(update: Update, context: CallbackContext):
-    """
-    Вызов настроек:
-     - /settings
-     - settings или настройки
-    """
-
-    # Если функция вызвана из CallbackQueryHandler
-    query = update.callback_query
-    if query:
-        query.answer()
-
-    message = update.effective_message
-
-    reply_markup = InlineKeyboardMarkup.from_button(
-        InlineKeyboardButton(SettingState.YEAR.value, callback_data=SettingState.YEAR.get_callback_data())
-    )
-
-    text = 'Выбор настроек:'
-
-    if query:
-        message.edit_text(text, reply_markup=reply_markup)
-    else:
-        message.reply_text(text, reply_markup=reply_markup)
-
-
-@mega_process
-def on_settings_year(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-
-    _on_reply_year(log, update, context)
 
 
 @mega_process
@@ -510,6 +567,7 @@ def setup(dp: Dispatcher):
     )
     dp.add_handler(CallbackQueryHandler(on_settings, pattern=SettingState.MAIN.get_pattern_full()))
     dp.add_handler(CallbackQueryHandler(on_settings_year, pattern=SettingState.YEAR.get_pattern_full()))
+    dp.add_handler(CallbackQueryHandler(on_settings_limit, pattern=SettingState.LIMIT.get_pattern_full()))
 
     # Возвращение статистики текущего пользователя
     dp.add_handler(CommandHandler('stats', on_get_user_stats))

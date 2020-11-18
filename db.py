@@ -19,7 +19,7 @@ import telegram
 
 from parsers import bash_im
 from parsers.bash_im import shorten
-from config import DIR, IGNORED_LAST_QUOTES
+from config import DIR, IGNORED_LAST_QUOTES, QUOTES_LIMIT
 
 
 DB_DIR_NAME = DIR / 'database'
@@ -91,6 +91,7 @@ class BaseModel(Model):
 
 class Settings(BaseModel):
     years_of_quotes = TextField(default='')
+    limit_unique_quotes = IntegerField(null=True)
 
     def get_years_of_quotes(self) -> List[int]:
         if not self.years_of_quotes:
@@ -104,6 +105,13 @@ class Settings(BaseModel):
             return
 
         self.years_of_quotes = text
+        self.save()
+
+    def get_limit_unique_quotes(self) -> int:
+        return self.limit_unique_quotes or IGNORED_LAST_QUOTES
+
+    def set_limit_unique_quotes(self, limit: int):
+        self.limit_unique_quotes = limit
         self.save()
 
 
@@ -150,6 +158,14 @@ class User(BaseModel):
             where=Quote.id.in_(query)
         ).count()
 
+    def get_user_unique_random(self, years: List[int] = None, limit=QUOTES_LIMIT) -> List['Quote']:
+        return Quote.get_user_unique_random(
+            self,
+            years,
+            limit,
+            self.get_limit_unique_quotes()
+        )
+
     def get_years_of_quotes(self) -> Dict[int, bool]:
         years = {x: False for x in Quote.get_years()}
         if self.settings:
@@ -168,6 +184,19 @@ class User(BaseModel):
             self.save(only=[User.settings])
 
         self.settings.set_years_of_quotes(years)
+
+    def get_limit_unique_quotes(self) -> int:
+        if not self.settings:
+            return IGNORED_LAST_QUOTES
+
+        return self.settings.get_limit_unique_quotes()
+
+    def set_limit_unique_quotes(self, limit: int):
+        if not self.settings:
+            self.settings = Settings.create()
+            self.save(only=[User.settings])
+
+        self.settings.set_limit_unique_quotes(limit)
 
 
 # SOURCE: https://core.telegram.org/bots/api#chat
@@ -261,7 +290,7 @@ class Quote(BaseModel):
         return quote_db
 
     @classmethod
-    def get_random(cls, limit=20) -> List['Quote']:
+    def get_random(cls, limit=QUOTES_LIMIT) -> List['Quote']:
         return list(cls.select().order_by(fn.Random()).limit(limit))
 
     @classmethod
@@ -269,7 +298,7 @@ class Quote(BaseModel):
             cls,
             user_id: Union[int, User],
             years: List[int] = None,
-            limit=20,
+            limit=QUOTES_LIMIT,
             ignored_last_quotes=IGNORED_LAST_QUOTES
     ) -> List['Quote']:
         # Last {ignored_last_quotes} returned quote's
