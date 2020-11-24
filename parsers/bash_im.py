@@ -135,7 +135,7 @@ class Quote:
                 urljoin(URL_BASE, a['href']) for a in strips_el.select('.quote__strips_link')
             ]
 
-            # Удаление тега, чтобы при получении текста цитаты не было в нем лишний текст
+            # Удаление тега, чтобы при получении текста цитаты не было в нем лишнего текста
             strips_el.decompose()
 
         href = quote_el.select_one('.quote__header_permalink')['href']
