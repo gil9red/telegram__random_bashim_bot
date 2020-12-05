@@ -9,25 +9,14 @@ import time
 from threading import Thread
 
 # pip install python-telegram-bot
-from telegram import Update
-from telegram.ext import Updater, CallbackContext
+from telegram.ext import Updater
 
 import commands
 import db
-from config import TOKEN, ERROR_TEXT, DIR_COMICS
-from common import log, reply_error
-from db_utils import catch_error, do_backup
+from config import TOKEN, DIR_COMICS
+from common import log
+from db_utils import do_backup
 from parsers import download_random_quotes, download_main_page_quotes, download_seq_page_quotes
-
-
-@catch_error(log)
-def on_error(update: Update, context: CallbackContext):
-    log.exception('Error: %s\nUpdate: %s', context.error, update)
-
-    db.Error.create_from(on_error, context.error, update)
-
-    if update:
-        reply_error(ERROR_TEXT, update, context)
 
 
 def main():
@@ -43,11 +32,7 @@ def main():
         workers=workers,
         use_context=True
     )
-
-    dp = updater.dispatcher
-    commands.setup(dp)
-
-    dp.add_error_handler(on_error)
+    commands.setup(updater)
 
     updater.start_polling()
     updater.idle()

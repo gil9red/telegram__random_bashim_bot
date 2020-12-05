@@ -13,11 +13,11 @@ from typing import Optional, Dict
 from telegram import (
     Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup, ChatAction
 )
-from telegram.ext import Dispatcher, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 from telegram.ext.dispatcher import run_async
 
 import db
-from config import DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY, LIMIT_UNIQUE_QUOTES
+from config import ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY, LIMIT_UNIQUE_QUOTES
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
     update_quote, reply_help, reply_error, reply_quote, reply_info,
@@ -540,7 +540,19 @@ def on_quote_comics(update: Update, context: CallbackContext):
         )
 
 
-def setup(dp: Dispatcher):
+@catch_error(log)
+def on_error(update: Update, context: CallbackContext):
+    log.exception('Error: %s\nUpdate: %s', context.error, update)
+
+    db.Error.create_from(on_error, context.error, update)
+
+    if update:
+        reply_error(ERROR_TEXT, update, context)
+
+
+def setup(updater: Updater):
+    dp = updater.dispatcher
+
     dp.add_handler(CommandHandler('start', on_start))
 
     dp.add_handler(CommandHandler('help', on_help))
@@ -647,3 +659,5 @@ def setup(dp: Dispatcher):
     dp.add_handler(CallbackQueryHandler(on_quote_comics, pattern=r'^\d+$'))
 
     fill_commands_for_help(dp)
+
+    dp.add_error_handler(on_error)
