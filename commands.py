@@ -398,9 +398,9 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
     text = f'''\
 <b>Статистика админа.</b>
 
-Пользователей: {db.User.select().count()}
+Пользователей: <b>{db.User.select().count()}</b>
 Цитат <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>
-Запросов: {db.Request.select().count()}
+Запросов: <b>{db.Request.select().count()}</b>
     '''
 
     update.effective_message.reply_html(text)
