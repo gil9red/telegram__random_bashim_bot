@@ -377,8 +377,8 @@ def on_get_user_stats(update: Update, context: CallbackContext):
 <b>Статистика.</b>
 
 Получено цитат <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>
-Всего запросов боту: {user.requests.count()}
-Разница между первым и последним запросом: {elapsed_days} дней
+Всего запросов боту: <b>{user.requests.count()}</b>
+Разница между первым и последним запросом: <b>{elapsed_days}</b> дней
     '''
 
     update.effective_message.reply_html(text)
