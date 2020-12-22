@@ -406,6 +406,10 @@ class Request(BaseModel):
 
         return query
 
+    @classmethod
+    def get_first_date_time(cls) -> DT.datetime:
+        return cls.select().order_by(cls.id).first().date_time
+
 
 class Error(BaseModel):
     class Meta:

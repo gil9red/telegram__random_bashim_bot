@@ -87,7 +87,14 @@ BUTTON_HELP_ADMIN = InlineKeyboardButton('Команды админа ➡️', c
 COMMON_COMMANDS = []
 ADMIN_COMMANDS = []
 
+START_TIME = DT.datetime.now()
+
 log = get_logger(Path(__file__).resolve().parent.name)
+
+
+def get_elapsed_time(date_time: DT.datetime) -> str:
+    diff = str(DT.datetime.now() - date_time)
+    return diff.split('.')[0]
 
 
 def fill_commands_for_help(dispatcher):

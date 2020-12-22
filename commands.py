@@ -21,7 +21,7 @@ from config import ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
     update_quote, reply_help, reply_error, reply_quote, reply_info,
-    BUTTON_HELP_COMMON, BUTTON_HELP_ADMIN,
+    BUTTON_HELP_COMMON, BUTTON_HELP_ADMIN, START_TIME, get_elapsed_time,
 )
 from db_utils import process_request, get_user_message_repr, catch_error
 from parsers import bash_im
@@ -401,6 +401,9 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
 Пользователей: <b>{db.User.select().count()}</b>
 Цитат <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>
 Запросов: <b>{db.Request.select().count()}</b>
+
+С первого запроса прошло: <b>{get_elapsed_time(db.Request.get_first_date_time())}</b>
+Бот запущен уже: <b>{get_elapsed_time(START_TIME)}</b>
     '''
 
     update.effective_message.reply_html(text)
