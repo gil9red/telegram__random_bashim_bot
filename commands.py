@@ -11,7 +11,7 @@ from typing import Optional, Dict
 
 # pip install python-telegram-bot
 from telegram import (
-    Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup, ChatAction
+    Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup, ChatAction, ParseMode
 )
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 from telegram.ext.dispatcher import run_async
@@ -25,6 +25,13 @@ from common import (
 )
 from db_utils import process_request, get_user_message_repr, catch_error
 from parsers import bash_im
+
+
+PATTERN_QUOTE_STATS = re.compile(r'(?i)^quote[ _]stats$|^статистика[ _]цитат$')
+PATTERN_QUERY_QUOTE_STATS = 'quote_stats'
+
+PATTERN_QUERY_COMICS_STATS = 'comics_stats'
+PATTERN_COMICS_STATS = re.compile(f'^{PATTERN_QUERY_COMICS_STATS}$')
 
 
 def composed(*decs):
@@ -417,6 +424,12 @@ def on_get_quote_stats(update: Update, context: CallbackContext):
      - quote[ _]stats или статистика[ _]цитат
     """
 
+    message = update.effective_message
+
+    query = update.callback_query
+    if query:
+        query.answer()
+
     quote_count = db.Quote.select().count()
     quote_with_comics_count = db.Quote.get_all_with_comics().count()
 
@@ -432,7 +445,60 @@ def on_get_quote_stats(update: Update, context: CallbackContext):
 {text_year_by_counts}
     '''
 
-    update.effective_message.reply_html(text)
+    reply_markup = InlineKeyboardMarkup.from_button(
+        InlineKeyboardButton('➡️ Комиксы', callback_data=PATTERN_QUERY_COMICS_STATS)
+    )
+
+    is_new = not message.edit_date
+    if is_new:
+        message.reply_html(
+            text,
+            reply_markup=reply_markup
+        )
+    else:
+        message.edit_text(
+            text,
+            parse_mode=ParseMode.HTML,
+            reply_markup=reply_markup,
+        )
+
+
+@mega_process
+def on_get_comics_stats(update: Update, context: CallbackContext):
+    message = update.effective_message
+
+    query = update.callback_query
+    query.answer()
+
+    quote_query = db.Quote.get_all_with_comics()
+    quote_count = quote_query.count()
+
+    year_by_number = {k: 0 for k in db.Quote.get_years()}
+    for quote in quote_query.select(db.Quote.date):
+        year = quote.date.year
+        year_by_number[year] += 1
+
+    text_year_by_counts = "\n".join(
+        f'    <b>{year}</b>: {count}'
+        for year, count in year_by_number.items()
+    )
+
+    text = f'''\
+<b>Статистика по комиксам.</b>
+
+Всего <b>{quote_count}</b>:
+{text_year_by_counts}
+    '''
+
+    reply_markup = InlineKeyboardMarkup.from_button(
+        InlineKeyboardButton('⬅️ Назад', callback_data=PATTERN_QUERY_QUOTE_STATS)
+    )
+
+    message.edit_text(
+        text,
+        parse_mode=ParseMode.HTML,
+        reply_markup=reply_markup,
+    )
 
 
 @mega_process
@@ -606,10 +672,12 @@ def setup(updater: Updater):
     dp.add_handler(CommandHandler('quote_stats', on_get_quote_stats, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^quote[ _]stats$|^статистика[ _]цитат$'),
+            FILTER_BY_ADMIN & Filters.regex(PATTERN_QUOTE_STATS),
             on_get_quote_stats
         )
     )
+    dp.add_handler(CallbackQueryHandler(on_get_quote_stats, pattern=PATTERN_QUOTE_STATS))
+    dp.add_handler(CallbackQueryHandler(on_get_comics_stats, pattern=PATTERN_COMICS_STATS))
 
     # Возвращение порядка вызова указанной цитаты у текущего пользователя, сортировка от конца
     dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests, FILTER_BY_ADMIN))
