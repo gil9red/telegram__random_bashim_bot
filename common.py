@@ -82,7 +82,7 @@ REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
 FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
 
 BUTTON_HELP_COMMON = InlineKeyboardButton('⬅️ Общие команды', callback_data='help_common')
-BUTTON_HELP_ADMIN = InlineKeyboardButton('Команды админа ➡️', callback_data='help_admin')
+BUTTON_HELP_ADMIN = InlineKeyboardButton('➡️ Команды админа', callback_data='help_admin')
 
 COMMON_COMMANDS = []
 ADMIN_COMMANDS = []
