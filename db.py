@@ -366,7 +366,7 @@ class Comics(BaseModel):
     url = TextField(unique=True)
     quote = ForeignKeyField(Quote, backref='comics')
 
-    def get_comics_id(self) -> int:
+    def get_comics_id(self) -> str:
         return self.url.rstrip('/').split('/')[-1]
 
     def __str__(self):
