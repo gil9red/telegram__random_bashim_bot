@@ -253,16 +253,17 @@ def reply_help(update: Update, context: CallbackContext):
         message.reply_text(text, reply_markup=reply_markup)
 
 
-def reply_error(text: str, update: Update, context: CallbackContext):
+def reply_error(text: str, update: Update, context: CallbackContext, **kwargs):
     update.effective_message.reply_text(
-        '⚠ ' + text
+        '⚠ ' + text,
+        **kwargs
     )
 
 
-def reply_info(text: str, update: Update, context: CallbackContext, parse_mode: ParseMode = None):
+def reply_info(text: str, update: Update, context: CallbackContext, **kwargs):
     update.effective_message.reply_text(
         'ℹ️ ' + text,
-        parse_mode=parse_mode,
+        **kwargs
     )
 
 
