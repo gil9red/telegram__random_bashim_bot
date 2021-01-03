@@ -376,7 +376,7 @@ def on_request(update: Update, context: CallbackContext):
 def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
     r"""
     Получение порядка вызова указанной цитаты у текущего пользователя:
-     - /get_used_quote
+     - /get_used_quote (\d+)
      - get[ _]used[ _]quote (\d+) или (\d+)
     """
 
@@ -539,7 +539,7 @@ def on_get_comics_stats(update: Update, context: CallbackContext):
 def on_get_users(update: Update, context: CallbackContext):
     r"""
     Получение пользователей:
-     - /get_users
+     - /get_users (\d+)
      - get[ _]users (\d+)
     """
 
@@ -612,7 +612,7 @@ def on_update_quote(update: Update, context: CallbackContext):
 def on_find_my(update: Update, context: CallbackContext):
     r"""
     Поиск цитат среди уже полученных:
-     - /find_my
+     - /find_my (.+)
      - find[_ ]my (.+)
     """
 
