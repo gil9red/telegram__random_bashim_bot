@@ -389,7 +389,10 @@ def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
 
     sub_query = db.Request.get_all_quote_id_by_user(user_id)
     items = [i for i, x in enumerate(sub_query) if x.quote_id == quote_id]
-    text = f'Цитата #{quote_id} найдена в {items}'
+    if items:
+        text = f'Цитата #{quote_id} найдена в {items}'
+    else:
+        text = f'Цитата #{quote_id} не найдена'
 
     reply_info(text, update, context)
 
@@ -593,7 +596,7 @@ def on_get_external_quote(update: Update, context: CallbackContext):
 def on_update_quote(update: Update, context: CallbackContext):
     r"""
     Обновление цитаты в базе с сайта:
-     - /update_quote
+     - /update_quote (\d+)
      - update[ _]quote (\d+)
     """
 
