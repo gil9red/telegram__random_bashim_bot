@@ -12,6 +12,7 @@ from threading import Thread
 from telegram.ext import Updater
 
 import commands
+import common
 import db
 from config import TOKEN, DIR_COMICS
 from common import log
@@ -32,6 +33,8 @@ def main():
         workers=workers,
         use_context=True
     )
+    common.BOT = updater.bot
+
     commands.setup(updater)
 
     updater.start_polling()

@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Union, Optional
 
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, Bot, ParseMode
 from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filters
 from telegram.ext.filters import MergedFilter
 
@@ -74,6 +74,13 @@ def get_doc(obj) -> Optional[str]:
 
     return '\n'.join(items).strip()
 
+
+def get_deep_linking(argument) -> str:
+    bot_name = BOT.name.lstrip('@')
+    return f'[{argument}](https://t.me/{bot_name}?start={argument})'
+
+
+BOT: Bot = None
 
 REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
     [[TEXT_BUTTON_MORE]], resize_keyboard=True
@@ -252,9 +259,10 @@ def reply_error(text: str, update: Update, context: CallbackContext):
     )
 
 
-def reply_info(text: str, update: Update, context: CallbackContext):
+def reply_info(text: str, update: Update, context: CallbackContext, parse_mode: ParseMode = None):
     update.effective_message.reply_text(
-        'ℹ️ ' + text
+        'ℹ️ ' + text,
+        parse_mode=parse_mode,
     )
 
 
