@@ -200,18 +200,13 @@ class User(BaseModel):
         self.settings.set_limit_unique_quotes(limit)
 
     def find(self, regex: str, case_insensitive=True) -> List[int]:
-        if case_insensitive:
-            regex = f'(?i){regex}'
-
         user_quotes = Quote.id.in_(
             Request.get_all_quote_id_by_user(self)
         )
-        return [
-            quote.id
-            for quote in Quote
-                .select(Quote.id)
-                .where(user_quotes & Quote.text.regexp(regex))
-        ]
+        return Quote.find(
+            regex, case_insensitive,
+            where=user_quotes,
+        )
 
 
 # SOURCE: https://core.telegram.org/bots/api#chat
@@ -371,6 +366,22 @@ class Quote(BaseModel):
         )
         return [row.year for row in query]
 
+    @classmethod
+    def find(cls, regex: str, case_insensitive=True, where: ModelSelect = None) -> List[int]:
+        if case_insensitive:
+            regex = f'(?i){regex}'
+
+        expr = cls.text.regexp(regex)
+        if where:
+            expr &= where
+
+        return [
+            quote.id
+            for quote in cls
+                .select(cls.id)
+                .where(expr)
+        ]
+
     def __str__(self):
         return self.__class__.__name__ + \
                f'(id={self.id}, url={self.url!r}, text={shorten(self.text)!r}, ' \
@@ -486,6 +497,9 @@ if __name__ == '__main__':
 
     assert admin.find('Arux') == admin.find('ARUX')
     assert admin.find('Arux') == admin.find('Arux', case_insensitive=False)
+
+    assert Quote.find('Arux') == Quote.find('ARUX')
+    assert Quote.find('Arux') == Quote.find('Arux', case_insensitive=False)
 
     print('Total users:', User.select().count())
     print('Total chats:', Chat.select().count())

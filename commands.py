@@ -7,7 +7,7 @@ __author__ = 'ipetrash'
 import enum
 import logging
 import re
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 # pip install python-telegram-bot
 from telegram import (
@@ -137,6 +137,22 @@ def get_local_quote(update: Update, context: CallbackContext):
         return
 
     reply_quote(quote, update, context)
+
+
+def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
+    if items:
+        result = ', '.join(get_deep_linking(quote_id) for quote_id in items)
+        text = f'Найдено {len(items)}:\n{result}'
+    else:
+        text = 'Не найдено!'
+
+    reply_info(
+        text,
+        update, context,
+        parse_mode=ParseMode.MARKDOWN,
+        disable_web_page_preview=True,
+        reply_to_message_id=update.effective_message.message_id
+    )
 
 
 @mega_process
@@ -620,19 +636,20 @@ def on_find_my(update: Update, context: CallbackContext):
 
     value = get_context_value(context)
     items = user.find(value)
+    reply_quote_ids(items, update, context)
 
-    if items:
-        text = ', '.join(get_deep_linking(quote_id) for quote_id in items)
-    else:
-        text = 'Не найдено!'
 
-    reply_info(
-        text,
-        update, context,
-        parse_mode=ParseMode.MARKDOWN,
-        disable_web_page_preview=True,
-        reply_to_message_id=update.effective_message.message_id
-    )
+@mega_process
+def on_find(update: Update, context: CallbackContext):
+    r"""
+    Поиск цитат в базе:
+     - /find (.+)
+     - find (.+)
+    """
+
+    value = get_context_value(context)
+    items = db.Quote.find(value)
+    reply_quote_ids(items, update, context)
 
 
 @mega_process
@@ -781,6 +798,14 @@ def setup(updater: Updater):
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^find[ _]my (.+)$'),
             on_find_my
+        )
+    )
+
+    dp.add_handler(CommandHandler('find', on_find, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^find (.+)$'),
+            on_find
         )
     )
 
