@@ -631,6 +631,7 @@ def on_find_my(update: Update, context: CallbackContext):
         update, context,
         parse_mode=ParseMode.MARKDOWN,
         disable_web_page_preview=True,
+        reply_to_message_id=update.effective_message.message_id
     )
 
 
