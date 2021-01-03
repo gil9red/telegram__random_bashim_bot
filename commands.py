@@ -7,7 +7,7 @@ __author__ = 'ipetrash'
 import enum
 import logging
 import re
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Callable
 
 # pip install python-telegram-bot
 from telegram import (
@@ -35,7 +35,7 @@ PATTERN_QUERY_COMICS_STATS = 'comics_stats'
 PATTERN_COMICS_STATS = re.compile(f'^{PATTERN_QUERY_COMICS_STATS}$')
 
 
-def composed(*decs):
+def composed(*decs) -> Callable:
     def deco(f):
         for dec in reversed(decs):
             f = dec(f)
@@ -43,7 +43,7 @@ def composed(*decs):
     return deco
 
 
-def mega_process(func):
+def mega_process(func) -> Callable:
     return composed(
         run_async,
         catch_error(log),
@@ -359,7 +359,7 @@ def on_settings_limit(update: Update, context: CallbackContext):
 
 
 @mega_process
-def on_request(update: Update, context: CallbackContext):
+def on_request(update: Update, context: CallbackContext) -> Optional[db.Quote]:
     quote = get_random_quote(update, context)
     if not quote:
         text = 'Закончились уникальные цитаты'
