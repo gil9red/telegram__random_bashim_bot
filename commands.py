@@ -22,6 +22,7 @@ from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
     update_quote, reply_help, reply_error, reply_quote, reply_info,
     BUTTON_HELP_COMMON, BUTTON_HELP_ADMIN, START_TIME, get_elapsed_time,
+    get_deep_linking
 )
 from db_utils import process_request, get_user_message_repr, catch_error
 from parsers import bash_im
@@ -101,22 +102,52 @@ def get_random_quote(update: Update, context: CallbackContext) -> Optional[db.Qu
     return
 
 
-def get_quote_id(context: CallbackContext) -> Optional[int]:
-    quote_id = None
+def get_context_value(context: CallbackContext) -> Optional[str]:
+    value = None
     try:
+        # Значение вытаскиваем из регулярки
         if context.match:
-            quote_id = int(context.match.group(1))
+            value = context.match.group(1)
         else:
-            quote_id = int(context.args[0])
+            # Значение из значений команды
+            value = ' '.join(context.args)
     except:
         pass
 
-    return quote_id
+    return value
+
+
+def get_quote_id(context: CallbackContext) -> Optional[int]:
+    try:
+        value = get_context_value(context)
+        return int(value)
+    except:
+        pass
+
+
+def get_local_quote(update: Update, context: CallbackContext):
+    quote_id = get_quote_id(context)
+    if not quote_id:
+        reply_error('Номер цитаты не указан', update, context)
+        return
+
+    quote = db.Quote.get_or_none(quote_id)
+    if not quote:
+        reply_error(f'Цитаты #{quote_id} нет в базе', update, context)
+        return
+
+    reply_quote(quote, update, context)
 
 
 @mega_process
 def on_start(update: Update, context: CallbackContext):
-    reply_help(update, context)
+    # При открытии цитаты через ссылку (deep linking)
+    if context.args:
+        # https://t.me/<bot>?start=<start_argument>
+        get_local_quote(update, context)
+
+    else:
+        reply_help(update, context)
 
 
 @mega_process
@@ -534,18 +565,7 @@ def on_get_quote(update: Update, context: CallbackContext):
      - get quote <номер цитаты>
     """
 
-    quote_id = get_quote_id(context)
-    if not quote_id:
-        reply_error('Номер цитаты не указан', update, context)
-        return
-
-    quote = db.Quote.get_or_none(quote_id)
-
-    if not quote:
-        reply_error(f'Цитаты #{quote_id} нет в базе', update, context)
-        return
-
-    reply_quote(quote, update, context)
+    get_local_quote(update, context)
 
 
 @mega_process
@@ -583,6 +603,27 @@ def on_update_quote(update: Update, context: CallbackContext):
         return
 
     update_quote(quote_id, update, context)
+
+
+@mega_process
+def on_find_my(update: Update, context: CallbackContext):
+    r"""
+    Поиск цитат среди уже полученных:
+     - /find_my
+     - find[_ ]my (.+)
+    """
+
+    user = db.User.get_from(update.effective_user)
+
+    value = get_context_value(context)
+    items = user.find(value)
+
+    if items:
+        text = ', '.join(get_deep_linking(quote_id) for quote_id in items)
+    else:
+        text = 'Не найдено!'
+
+    reply_info(text, update, context, parse_mode=ParseMode.MARKDOWN)
 
 
 @mega_process
@@ -723,6 +764,14 @@ def setup(updater: Updater):
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^update[ _]quote (\d+)$'),
             on_update_quote
+        )
+    )
+
+    dp.add_handler(CommandHandler('find_my', on_find_my, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^find[ _]my (.+)$'),
+            on_find_my
         )
     )
 

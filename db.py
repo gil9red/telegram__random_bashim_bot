@@ -45,10 +45,11 @@ db = SqliteQueueDatabase(
         'journal_mode': 'wal',    # WAL-mode
         'cache_size': -1024 * 64  # 64MB page-cache
     },
-    use_gevent=False,    # Use the standard library "threading" module.
+    use_gevent=False,     # Use the standard library "threading" module.
     autostart=True,
-    queue_max_size=64,   # Max. # of pending writes that can accumulate.
-    results_timeout=5.0  # Max. time to wait for query to be executed.
+    queue_max_size=64,    # Max. # of pending writes that can accumulate.
+    results_timeout=5.0,  # Max. time to wait for query to be executed.
+    regexp_function=True
 )
 
 
@@ -197,6 +198,20 @@ class User(BaseModel):
             self.save(only=[User.settings])
 
         self.settings.set_limit_unique_quotes(limit)
+
+    def find(self, regex: str, case_insensitive=True) -> List[int]:
+        if case_insensitive:
+            regex = f'(?i){regex}'
+
+        user_quotes = Quote.id.in_(
+            Request.get_all_quote_id_by_user(self)
+        )
+        return [
+            quote.id
+            for quote in Quote
+                .select(Quote.id)
+                .where(user_quotes & Quote.text.regexp(regex))
+        ]
 
 
 # SOURCE: https://core.telegram.org/bots/api#chat
@@ -460,7 +475,7 @@ db_error.create_tables([Error])
 
 if __name__ == '__main__':
     from config import ADMIN_USERNAME
-    admin = User.get(User.username == ADMIN_USERNAME[1:])
+    admin: User = User.get(User.username == ADMIN_USERNAME[1:])
     print('Admin:', admin)
     # print(*Quote.get_user_unique_random(admin, limit=5), sep='\n')
     # print(*Quote.get_user_unique_random(admin, years=[2004], limit=5), sep='\n')
@@ -468,6 +483,9 @@ if __name__ == '__main__':
     # admin.set_years_of_quotes({k: True for k in [2004, 2007, 2010]})
     # print(admin.get_years_of_quotes())
     print()
+
+    assert admin.find('Arux') == admin.find('ARUX')
+    assert admin.find('Arux') == admin.find('Arux', case_insensitive=False)
 
     print('Total users:', User.select().count())
     print('Total chats:', Chat.select().count())
