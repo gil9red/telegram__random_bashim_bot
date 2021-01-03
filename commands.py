@@ -626,7 +626,12 @@ def on_find_my(update: Update, context: CallbackContext):
     else:
         text = 'Не найдено!'
 
-    reply_info(text, update, context, parse_mode=ParseMode.MARKDOWN)
+    reply_info(
+        text,
+        update, context,
+        parse_mode=ParseMode.MARKDOWN,
+        disable_web_page_preview=True,
+    )
 
 
 @mega_process
