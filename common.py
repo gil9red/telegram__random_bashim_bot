@@ -75,9 +75,10 @@ def get_doc(obj) -> Optional[str]:
     return '\n'.join(items).strip()
 
 
-def get_deep_linking(argument) -> str:
+def get_deep_linking(argument, update: Update) -> str:
     bot_name = BOT.name.lstrip('@')
-    return f'[{argument}](https://t.me/{bot_name}?start={argument})'
+    from_message_id = update.effective_message.message_id
+    return f'[{argument}](https://t.me/{bot_name}?start={argument}_{from_message_id})'
 
 
 BOT: Bot = None
@@ -271,11 +272,13 @@ def reply_quote(
         quote: Union[bash_im.Quote, db.Quote],
         update: Update,
         context: CallbackContext,
-        reply_markup: ReplyKeyboardMarkup = None
+        reply_markup: ReplyKeyboardMarkup = None,
+        **kwargs
 ):
     # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
     update.effective_message.reply_html(
         get_html_message(quote),
         disable_web_page_preview=True,
-        reply_markup=reply_markup
+        reply_markup=reply_markup,
+        **kwargs
     )

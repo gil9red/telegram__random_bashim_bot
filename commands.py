@@ -125,8 +125,13 @@ def get_quote_id(context: CallbackContext) -> Optional[int]:
         pass
 
 
-def get_local_quote(update: Update, context: CallbackContext):
-    quote_id = get_quote_id(context)
+def reply_local_quote(
+        update: Update, context: CallbackContext,
+        quote_id: int = None, **kwargs
+):
+    if not quote_id:
+        quote_id = get_quote_id(context)
+
     if not quote_id:
         reply_error('Номер цитаты не указан', update, context)
         return
@@ -136,12 +141,16 @@ def get_local_quote(update: Update, context: CallbackContext):
         reply_error(f'Цитаты #{quote_id} нет в базе', update, context)
         return
 
-    reply_quote(quote, update, context)
+    reply_quote(
+        quote, update,
+        context,
+        **kwargs
+    )
 
 
 def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
     if items:
-        result = ', '.join(get_deep_linking(quote_id) for quote_id in items)
+        result = ', '.join(get_deep_linking(quote_id, update) for quote_id in items)
         text = f'Найдено {len(items)}:\n{result}'
     else:
         text = 'Не найдено!'
@@ -158,9 +167,18 @@ def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
 @mega_process
 def on_start(update: Update, context: CallbackContext):
     # При открытии цитаты через ссылку (deep linking)
+    # https://t.me/<bot_name>?start=<start_argument>
     if context.args:
-        # https://t.me/<bot>?start=<start_argument>
-        get_local_quote(update, context)
+        # ["400245_2046"] -> 400245, 2046
+        quote_id, message_id = map(int, context.args[0].split('_'))
+        reply_local_quote(
+            update, context,
+            quote_id=quote_id,
+            reply_to_message_id=message_id
+        )
+
+        # Удаление сообщения с /start при клике на id цитат в сообщении с результатом поиска
+        update.effective_message.delete()
 
     else:
         reply_help(update, context)
@@ -584,7 +602,7 @@ def on_get_quote(update: Update, context: CallbackContext):
      - get quote <номер цитаты>
     """
 
-    get_local_quote(update, context)
+    reply_local_quote(update, context)
 
 
 @mega_process
