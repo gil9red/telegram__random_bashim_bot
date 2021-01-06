@@ -442,7 +442,7 @@ def on_get_used_last_quote_in_requests(update: Update, context: CallbackContext)
     r"""
     Получение порядка вызова у последней цитаты текущего пользователя:
      - /get_used_last_quote
-     - get[ _]used[ _]last[ _]quote или &
+     - get[ _]used[ _]last[ _]quote или ?
     """
 
     user_id = update.effective_user.id
@@ -803,7 +803,7 @@ def setup(updater: Updater):
     dp.add_handler(CommandHandler('get_used_last_quote', on_get_used_last_quote_in_requests, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote|&$'),
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote|\?$'),
             on_get_used_last_quote_in_requests
         )
     )
