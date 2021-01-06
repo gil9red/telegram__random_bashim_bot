@@ -128,7 +128,7 @@ def get_quote_id(context: CallbackContext) -> Optional[int]:
 def reply_local_quote(
         update: Update, context: CallbackContext,
         quote_id: int = None, **kwargs
-):
+) -> Optional[db.Quote]:
     if not quote_id:
         quote_id = get_quote_id(context)
 
@@ -146,6 +146,8 @@ def reply_local_quote(
         context,
         **kwargs
     )
+
+    return quote
 
 
 def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
@@ -165,13 +167,13 @@ def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
 
 
 @mega_process
-def on_start(update: Update, context: CallbackContext):
+def on_start(update: Update, context: CallbackContext) -> Optional[db.Quote]:
     # При открытии цитаты через ссылку (deep linking)
     # https://t.me/<bot_name>?start=<start_argument>
     if context.args:
         # ["400245_2046"] -> 400245, 2046
         quote_id, message_id = map(int, context.args[0].split('_'))
-        reply_local_quote(
+        quote = reply_local_quote(
             update, context,
             quote_id=quote_id,
             reply_to_message_id=message_id
@@ -180,8 +182,9 @@ def on_start(update: Update, context: CallbackContext):
         # Удаление сообщения с /start при клике на id цитат в сообщении с результатом поиска
         update.effective_message.delete()
 
-    else:
-        reply_help(update, context)
+        return quote
+
+    reply_help(update, context)
 
 
 @mega_process
