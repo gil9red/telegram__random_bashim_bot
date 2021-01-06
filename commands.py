@@ -166,6 +166,17 @@ def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
     )
 
 
+def reply_get_used_quote(user_id: int, quote_id: int, update: Update, context: CallbackContext):
+    sub_query = db.Request.get_all_quote_id_by_user(user_id)
+    items = [i for i, x in enumerate(sub_query) if x.quote_id == quote_id]
+    if items:
+        text = f'Цитата #{quote_id} найдена в {items}'
+    else:
+        text = f'Цитата #{quote_id} не найдена'
+
+    reply_info(text, update, context)
+
+
 @mega_process
 def on_start(update: Update, context: CallbackContext) -> Optional[db.Quote]:
     # При открытии цитаты через ссылку (deep linking)
@@ -423,15 +434,21 @@ def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
         return
 
     user_id = update.effective_user.id
+    reply_get_used_quote(user_id, quote_id, update, context)
 
-    sub_query = db.Request.get_all_quote_id_by_user(user_id)
-    items = [i for i, x in enumerate(sub_query) if x.quote_id == quote_id]
-    if items:
-        text = f'Цитата #{quote_id} найдена в {items}'
-    else:
-        text = f'Цитата #{quote_id} не найдена'
 
-    reply_info(text, update, context)
+@mega_process
+def on_get_used_last_quote_in_requests(update: Update, context: CallbackContext):
+    r"""
+    Получение порядка вызова у последней цитаты текущего пользователя:
+     - /get_used_last_quote
+     - get[ _]used[ _]last[ _]quote или $
+    """
+
+    user_id = update.effective_user.id
+    quote_id = db.Request.get_all_quote_id_by_user(user_id).first().quote_id
+
+    reply_get_used_quote(user_id, quote_id, update, context)
 
 
 @mega_process
@@ -779,6 +796,15 @@ def setup(updater: Updater):
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'^(\d+)$'),
             on_get_used_quote_in_requests
+        )
+    )
+
+    # Возвращение порядка вызова у последней полученный цитаты у текущего пользователя, сортировка от конца
+    dp.add_handler(CommandHandler('get_used_last_quote', on_get_used_last_quote_in_requests, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote|\$$'),
+            on_get_used_last_quote_in_requests
         )
     )
 
