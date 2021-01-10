@@ -45,6 +45,11 @@ def process_request(log: logging.Logger):
             except:
                 message = None
 
+            try:
+                query_data = update.callback_query.data
+            except:
+                query_data = None
+
             t = time.perf_counter_ns()
             result = func(update, context)
             elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
@@ -61,6 +66,7 @@ def process_request(log: logging.Logger):
                 chat=chat_db,
                 quote=quote_db,
                 message=message,
+                query_data=query_data,
             )
 
             return result

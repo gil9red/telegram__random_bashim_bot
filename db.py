@@ -408,6 +408,7 @@ class Request(BaseModel):
     chat = ForeignKeyField(Chat, null=True, backref='requests')
     quote = ForeignKeyField(Quote, null=True, backref='requests')
     message = TextField(null=True)
+    query_data = TextField(null=True)
 
     @classmethod
     def get_all_quote_id_by_user(
