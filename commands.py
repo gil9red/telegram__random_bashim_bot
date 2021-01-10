@@ -735,6 +735,9 @@ def on_find(update: Update, context: CallbackContext):
 
 @mega_process
 def on_get_quotes(update: Update, context: CallbackContext) -> List[db.Quote]:
+    query = update.callback_query
+    query.answer()
+
     # Example: ('2116', '391788,395909,397806,399835,404251')
     from_message_id, quote_ids = context.match.groups()
     from_message_id = int(from_message_id)
