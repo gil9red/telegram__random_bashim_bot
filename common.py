@@ -10,7 +10,7 @@ import html
 import logging
 import sys
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union, Optional, List
 
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, Bot, ParseMode
 from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filters
@@ -19,6 +19,17 @@ from telegram.ext.filters import MergedFilter
 import db
 from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS
 from parsers import bash_im
+
+
+def split_list(items: List, columns: int = 5) -> List[List]:
+    result = []
+
+    for i in range(0, len(items), columns):
+        result.append(
+            [key for key in items[i: i + columns]]
+        )
+
+    return result
 
 
 def get_logger(file_name: str, dir_name='logs'):

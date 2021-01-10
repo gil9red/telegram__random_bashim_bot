@@ -22,7 +22,7 @@ from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
     update_quote, reply_help, reply_error, reply_quote, reply_info,
     BUTTON_HELP_COMMON, BUTTON_HELP_ADMIN, START_TIME, get_elapsed_time,
-    get_deep_linking
+    get_deep_linking, split_list
 )
 from db_utils import process_request, get_user_message_repr, catch_error
 from parsers import bash_im
@@ -33,6 +33,15 @@ PATTERN_QUERY_QUOTE_STATS = 'quote_stats'
 
 PATTERN_QUERY_COMICS_STATS = 'comics_stats'
 PATTERN_COMICS_STATS = re.compile(f'^{PATTERN_QUERY_COMICS_STATS}$')
+
+PATTERN_GET_QUOTES = re.compile(r'^get_(\d+)_([\d,]+)$')
+
+
+# SOURCE: https://github.com/gil9red/telegram_bot__gamebook/blob/7b7399c83ae6249da9dc92ea5dc475cc0565edc0/bot/regexp.py#L22
+def fill_string_pattern(pattern: re.Pattern, *args) -> str:
+    pattern = pattern.pattern
+    pattern = pattern.strip('^$')
+    return re.sub(r'\(.+?\)', '{}', pattern).format(*args)
 
 
 def composed(*decs) -> Callable:
@@ -291,25 +300,15 @@ def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext
 
         update_cache(user, years_of_quotes, log, update, context)
 
-    keys = list(years_of_quotes)
-    data = settings.get_callback_data()
-    columns = 4
-    buttons = []
-    for i in range(0, len(keys), columns):
-        row = []
-        for key in keys[i: i + columns]:
-            is_selected = years_of_quotes[key]
-
-            year_str = str(key)
-            row.append(
-                InlineKeyboardButton(
-                    (CHECKBOX if is_selected else CHECKBOX_EMPTY) + ' ' + year_str,
-                    callback_data=data + '_' + year_str
-                )
-            )
-
-        buttons.append(row)
-
+    # Генерация матрицы кнопок
+    items = [
+        InlineKeyboardButton(
+            (CHECKBOX if is_selected else CHECKBOX_EMPTY) + f' {year}',
+            callback_data=fill_string_pattern(pattern, year)
+        )
+        for year, is_selected in years_of_quotes.items()
+    ]
+    buttons = split_list(items, columns=4)
     buttons.append([INLINE_KEYBOARD_BUTTON_BACK])
 
     reply_markup = InlineKeyboardMarkup(buttons)
@@ -344,24 +343,16 @@ def _on_reply_limit(log: logging.Logger, update: Update, context: CallbackContex
         user.set_limit_unique_quotes(data_limit)
 
     limit = user.get_limit_unique_quotes()
-    data = settings.get_callback_data()
-    columns = 3
-    buttons = []
-    for i in range(0, len(LIMIT_UNIQUE_QUOTES), columns):
-        row = []
-        for x in LIMIT_UNIQUE_QUOTES[i: i + columns]:
-            limit_str = str(x)
-            is_selected = limit_str == str(limit)
 
-            row.append(
-                InlineKeyboardButton(
-                    (RADIOBUTTON if is_selected else RADIOBUTTON_EMPTY) + ' ' + limit_str,
-                    callback_data=data + '_' + limit_str
-                )
-            )
-
-        buttons.append(row)
-
+    # Генерация матрицы кнопок
+    items = [
+        InlineKeyboardButton(
+            (RADIOBUTTON if x == limit else RADIOBUTTON_EMPTY) + f' {x}',
+            callback_data=fill_string_pattern(pattern, x)
+        )
+        for x in LIMIT_UNIQUE_QUOTES
+    ]
+    buttons = split_list(items, columns=3)
     buttons.append([INLINE_KEYBOARD_BUTTON_BACK])
 
     reply_markup = InlineKeyboardMarkup(buttons)
