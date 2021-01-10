@@ -7,6 +7,7 @@ __author__ = 'ipetrash'
 import enum
 import logging
 import re
+import time
 from typing import Optional, Dict, List, Callable
 
 # pip install python-telegram-bot
@@ -17,7 +18,10 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, Callb
 from telegram.ext.dispatcher import run_async
 
 import db
-from config import ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY, LIMIT_UNIQUE_QUOTES
+from config import (
+    ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY, LIMIT_UNIQUE_QUOTES,
+    MAX_MESSAGE_LENGTH
+)
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
     update_quote, reply_help, reply_error, reply_quote, reply_info,
@@ -160,18 +164,66 @@ def reply_local_quote(
 
 
 def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
+    sep = ', '
+
+    def _get_search_result(items: list) -> str:
+        result = sep.join(get_deep_linking(quote_id, update) for quote_id in items)
+        return f'Найдено {len(items)}:\n{result}'
+
+    def _get_result(items: list, post_fix='...') -> str:
+        text = _get_search_result(items)
+        if len(text) <= MAX_MESSAGE_LENGTH:
+            return text
+
+        # Результат может быть слишком большим, а нужно вместить сообщение в MAX_MESSAGE_LENGTH
+        # Поэтому, если при составлении текста результата длина вышла больше нужно уменьшить
+        prev = 0
+        while True:
+            i = text.find(sep, prev + 1)
+            if i == -1:
+                break
+
+            # Если на этой итерации кусочек текста превысил максимум, значит нужно остановиться,
+            # а предыдущий кусочек текста сохранить -- его размер как раз подходит
+            if len(text[:i]) + len(post_fix) > MAX_MESSAGE_LENGTH:
+                text = text[:prev] + post_fix
+                break
+
+            prev = i
+
+        return text
+
     if items:
-        result = ', '.join(get_deep_linking(quote_id, update) for quote_id in items)
-        text = f'Найдено {len(items)}:\n{result}'
+        text = _get_result(items)
     else:
         text = 'Не найдено!'
+
+    from_message_id = update.effective_message.message_id
+
+    # Первые 50 результатов
+    max_results = 50
+
+    # Результат будет разделен по группам: 1-5, 6-10, ...
+    parts = 5
+
+    buttons = []
+    for i in range(0, len(items[:max_results]), parts):
+        sub_items = items[i:i + parts]
+        data = fill_string_pattern(PATTERN_GET_QUOTES, from_message_id, ",".join(map(str, sub_items)))
+        buttons.append(
+            InlineKeyboardButton(f'{i + 1}-{i + len(sub_items)}', callback_data=data)
+        )
+
+    buttons = split_list(buttons, columns=5)
+    reply_markup = InlineKeyboardMarkup(buttons)
 
     reply_info(
         text,
         update, context,
         parse_mode=ParseMode.MARKDOWN,
         disable_web_page_preview=True,
-        reply_to_message_id=update.effective_message.message_id
+        reply_to_message_id=update.effective_message.message_id,
+        reply_markup=reply_markup,
     )
 
 
@@ -606,14 +658,14 @@ def on_get_users(update: Update, context: CallbackContext):
 
 
 @mega_process
-def on_get_quote(update: Update, context: CallbackContext):
+def on_get_quote(update: Update, context: CallbackContext) -> Optional[db.Quote]:
     """
     Получение цитаты из базы:
      - /get_quote <номер цитаты>
      - get quote <номер цитаты>
     """
 
-    reply_local_quote(update, context)
+    return reply_local_quote(update, context)
 
 
 @mega_process
@@ -679,6 +731,27 @@ def on_find(update: Update, context: CallbackContext):
     value = get_context_value(context)
     items = db.Quote.find(value)
     reply_quote_ids(items, update, context)
+
+
+@mega_process
+def on_get_quotes(update: Update, context: CallbackContext) -> List[db.Quote]:
+    # Example: ('2116', '391788,395909,397806,399835,404251')
+    from_message_id, quote_ids = context.match.groups()
+    from_message_id = int(from_message_id)
+
+    items = []
+    for quote_id in map(int, quote_ids.split(',')):
+        quote = reply_local_quote(
+            update, context,
+            quote_id=quote_id,
+            reply_to_message_id=from_message_id
+        )
+        if quote:
+            items.append(quote)
+
+        time.sleep(0.05)
+
+    return items
 
 
 @mega_process
@@ -846,6 +919,8 @@ def setup(updater: Updater):
             on_find
         )
     )
+
+    dp.add_handler(CallbackQueryHandler(on_get_quotes, pattern=PATTERN_GET_QUOTES))
 
     dp.add_handler(MessageHandler(Filters.text, on_request))
     dp.add_handler(CallbackQueryHandler(on_quote_comics, pattern=r'^\d+$'))

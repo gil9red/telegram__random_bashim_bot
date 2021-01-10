@@ -17,7 +17,7 @@ from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filter
 from telegram.ext.filters import MergedFilter
 
 import db
-from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS
+from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS, MAX_MESSAGE_LENGTH
 from parsers import bash_im
 
 
@@ -266,17 +266,19 @@ def reply_help(update: Update, context: CallbackContext):
 
 
 def reply_error(text: str, update: Update, context: CallbackContext, **kwargs):
-    update.effective_message.reply_text(
-        '⚠ ' + text,
-        **kwargs
-    )
+    text = '⚠ ' + text
+    if len(text) > MAX_MESSAGE_LENGTH:
+        text = text[:MAX_MESSAGE_LENGTH-3] + '...'
+
+    update.effective_message.reply_text(text, **kwargs)
 
 
 def reply_info(text: str, update: Update, context: CallbackContext, **kwargs):
-    update.effective_message.reply_text(
-        'ℹ️ ' + text,
-        **kwargs
-    )
+    text = 'ℹ️ ' + text
+    if len(text) > MAX_MESSAGE_LENGTH:
+        text = text[:MAX_MESSAGE_LENGTH-3] + '...'
+
+    update.effective_message.reply_text(text, **kwargs)
 
 
 def reply_quote(
