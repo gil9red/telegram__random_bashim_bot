@@ -56,6 +56,7 @@ def process_request(log: logging.Logger):
 
             log.debug(f'[{func.__name__}] Elapsed {elapsed_ms} ms')
 
+            # NOTE: support List[Quote] (for on_get_quotes)?
             if isinstance(result, Quote):
                 quote_db = result
 
