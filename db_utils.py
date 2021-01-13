@@ -27,7 +27,9 @@ def process_request(log: logging.Logger):
     def actual_decorator(func):
         @functools.wraps(func)
         def wrapper(update: Update, context: CallbackContext):
-            user_db = chat_db = quote_db = None
+            func_name = func.__name__
+            user_db = chat_db = None
+
             if update:
                 user = update.effective_user
                 chat = update.effective_chat
@@ -56,19 +58,33 @@ def process_request(log: logging.Logger):
 
             log.debug(f'[{func.__name__}] Elapsed {elapsed_ms} ms')
 
-            # NOTE: support List[Quote] (for on_get_quotes)?
-            if isinstance(result, Quote):
-                quote_db = result
+            # Поддержка List[Quote] (для on_get_quotes). Это для учёта цитат среди
+            # просмотренных ранее при получении группы цитат из результата поиска
+            # через встроенные кнопки
+            quote_dbs = []
 
-            Request.create(
-                func_name=func.__name__,
-                elapsed_ms=elapsed_ms,
-                user=user_db,
-                chat=chat_db,
-                quote=quote_db,
-                message=message,
-                query_data=query_data,
-            )
+            # Если вернулся список цитат
+            if isinstance(result, list):
+                for x in result:
+                    if isinstance(x, Quote):
+                        quote_dbs.append(x)
+
+            elif isinstance(result, Quote):
+                quote_dbs.append(result)
+            else:
+                # Request нужно в любом случае создать
+                quote_dbs.append(None)
+
+            for quote_db in quote_dbs:
+                Request.create(
+                    func_name=func_name,
+                    elapsed_ms=elapsed_ms,
+                    user=user_db,
+                    chat=chat_db,
+                    quote=quote_db,
+                    message=message,
+                    query_data=query_data,
+                )
 
             return result
 
