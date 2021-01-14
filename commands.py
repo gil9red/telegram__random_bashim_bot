@@ -209,9 +209,14 @@ def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
     buttons = []
     for i in range(0, len(items[:max_results]), parts):
         sub_items = items[i:i + parts]
+        start = i + 1
+        end = i + len(sub_items)
+        text_btn = f'{start}' if start == end else f'{start}-{end}'
+
         data = fill_string_pattern(PATTERN_GET_QUOTES, from_message_id, ",".join(map(str, sub_items)))
+
         buttons.append(
-            InlineKeyboardButton(f'{i + 1}-{i + len(sub_items)}', callback_data=data)
+            InlineKeyboardButton(text_btn, callback_data=data)
         )
 
     buttons = split_list(buttons, columns=5)
