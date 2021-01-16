@@ -23,9 +23,9 @@ from config import DIR, IGNORED_LAST_QUOTES, QUOTES_LIMIT
 
 
 DB_DIR_NAME = DIR / 'database'
-DB_FILE_NAME = str(DB_DIR_NAME / 'database.sqlite')
-
 DB_DIR_NAME.mkdir(parents=True, exist_ok=True)
+
+DB_FILE_NAME = str(DB_DIR_NAME / 'database.sqlite')
 
 BACKUP_DIR_NAME = DIR / 'backup'
 
