@@ -111,7 +111,7 @@ START_TIME = DT.datetime.now()
 log = get_logger(Path(__file__).resolve().parent.name)
 
 
-def get_plural_day(n: int) -> str:
+def get_plural_days(n: int) -> str:
     days = ['день', 'дня', 'дней']
 
     if n % 10 == 1 and n % 100 != 11:
@@ -126,7 +126,7 @@ def get_plural_day(n: int) -> str:
 
 def get_elapsed_time(date_time: DT.datetime) -> str:
     delta = DT.datetime.now() - date_time
-    day = get_plural_day(delta.days)
+    day = get_plural_days(delta.days)
     diff = str(delta).replace('days', day)
     return diff.split('.')[0]
 
