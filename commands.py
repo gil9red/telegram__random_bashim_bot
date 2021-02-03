@@ -545,8 +545,8 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
 Цитат <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>
 Запросов: <b>{db.Request.select().count()}</b>
 
-С первого запроса прошло: <b>{get_elapsed_time(db.Request.get_first_date_time())}</b>
-Бот запущен уже: <b>{get_elapsed_time(START_TIME)}</b>
+Бот запущен с <b>{START_TIME:%d/%m/%Y}</b> (прошло <b>{get_elapsed_time(START_TIME)}</b>)
+С первого запроса прошло <b>{get_elapsed_time(db.Request.get_first_date_time())}</b>
     '''
 
     update.effective_message.reply_html(text)
