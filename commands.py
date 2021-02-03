@@ -739,6 +739,24 @@ def on_find(update: Update, context: CallbackContext):
 
 
 @mega_process
+def on_find_new(update: Update, context: CallbackContext):
+    r"""
+    Поиск цитат в базе, что еще не были получены:
+     - /find_new (.+)
+     - find[_ ]new (.+)
+    """
+
+    user = db.User.get_from(update.effective_user)
+    value = get_context_value(context)
+
+    items_all = db.Quote.find(value)
+    items_user = user.find(value)
+    items = [x for x in items_all if x not in items_user]
+
+    reply_quote_ids(items, update, context)
+
+
+@mega_process
 def on_get_quotes(update: Update, context: CallbackContext) -> List[db.Quote]:
     query = update.callback_query
     query.answer()
@@ -917,6 +935,14 @@ def setup(updater: Updater):
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^find[ _]my (.+)$'),
             on_find_my
+        )
+    )
+
+    dp.add_handler(CommandHandler('find_new', on_find_new, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^find[ _]new (.+)$'),
+            on_find_new
         )
     )
 
