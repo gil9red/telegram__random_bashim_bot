@@ -127,7 +127,7 @@ def get_plural_days(n: int) -> str:
 def get_elapsed_time(date_time: DT.datetime) -> str:
     delta = DT.datetime.now() - date_time
     day = get_plural_days(delta.days)
-    diff = str(delta).replace('days', day)
+    diff = str(delta).replace('days', day).replace('day', day)
     return diff.split('.')[0]
 
 
