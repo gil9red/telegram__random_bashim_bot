@@ -638,6 +638,42 @@ def on_get_comics_stats(update: Update, context: CallbackContext):
 
 
 @mega_process
+def on_get_users_short(update: Update, context: CallbackContext):
+    r"""
+    Получение пользователей (короткая):
+     - /get_users_short (\d+)
+     - get[ _]users[ _]short (\d+)
+    """
+
+    try:
+        if context.match and context.match.groups():
+            limit = int(context.match.group(1))
+        else:
+            limit = int(context.args[0])
+    except:
+        limit = 50
+
+    query = db.User.select().order_by(db.User.last_activity.desc()).limit(limit)
+    items = []
+    for i, user in enumerate(query, 1):
+        parts = []
+        if user.first_name:
+            parts.append(user.first_name.strip())
+        if user.last_name:
+            parts.append(user.last_name.strip())
+        if user.username:
+            parts.append('@' + user.username.strip())
+
+        full_name = ' '.join(parts).strip()
+        last_activity = str(user.last_activity).split('.')[0]
+        items.append(f'{i}. {full_name!r}, last_activity: {last_activity}, quotes: {user.get_total_quotes()}')
+
+    text = 'Users:\n' + '\n'.join(items)
+
+    update.effective_message.reply_text(text)
+
+
+@mega_process
 def on_get_users(update: Update, context: CallbackContext):
     r"""
     Получение пользователей:
@@ -895,6 +931,14 @@ def setup(updater: Updater):
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote|\?$'),
             on_get_used_last_quote_in_requests
+        )
+    )
+
+    dp.add_handler(CommandHandler('get_users_short', on_get_users_short, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]users[ _]short (\d+)$') | Filters.regex(r'(?i)^get users$')),
+            on_get_users_short
         )
     )
 
