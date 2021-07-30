@@ -791,6 +791,22 @@ def on_find_new(update: Update, context: CallbackContext):
 
 
 @mega_process
+def on_get_cache_length(update: Update, context: CallbackContext):
+    r"""
+    Возвращение количества цитат в кэше:
+     - /get_cache_length
+     - get[ _]cache[ _]length
+    """
+
+    quotes = context.user_data.get('quotes', [])
+    reply_info(
+        f'Цитат в кэше пользователя: **{len(quotes)}**',
+        update, context,
+        parse_mode=ParseMode.MARKDOWN
+    )
+
+
+@mega_process
 def on_get_quotes(update: Update, context: CallbackContext) -> List[db.Quote]:
     query = update.callback_query
     query.answer()
@@ -1017,6 +1033,16 @@ def setup(updater: Updater):
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^find (.+)$'),
             on_find,
+            run_async=True
+        )
+    )
+
+    # Возвращение количества цитат в кэше
+    dp.add_handler(CommandHandler('get_cache_length', on_get_cache_length, FILTER_BY_ADMIN, run_async=True))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]cache[ _]length$'),
+            on_get_cache_length,
             run_async=True
         )
     )
