@@ -827,6 +827,7 @@ def on_get_quotes(update: Update, context: CallbackContext) -> List[db.Quote]:
 
         time.sleep(0.05)
 
+    # Возвращаем для учета в декораторе показанных цитат
     return items
 
 
