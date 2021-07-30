@@ -15,7 +15,6 @@ from telegram import (
     Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup, ChatAction, ParseMode
 )
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
-from telegram.ext.dispatcher import run_async
 
 import db
 from config import (
@@ -58,7 +57,6 @@ def composed(*decs) -> Callable:
 
 def mega_process(func) -> Callable:
     return composed(
-        run_async,
         catch_error(log),
         process_request(log),
         log_func(log),
@@ -853,155 +851,180 @@ def on_error(update: Update, context: CallbackContext):
 def setup(updater: Updater):
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler('start', on_start))
+    dp.add_handler(CommandHandler('start', on_start, run_async=True))
 
-    dp.add_handler(CommandHandler('help', on_help))
+    dp.add_handler(CommandHandler('help', on_help, run_async=True))
     dp.add_handler(
         MessageHandler(
             Filters.regex(r'(?i)^help$|^помощь$'),
-            on_help
+            on_help,
+            run_async=True
         )
     )
     dp.add_handler(
         CallbackQueryHandler(
-            on_help, pattern=f"^{BUTTON_HELP_COMMON.callback_data}|{BUTTON_HELP_ADMIN.callback_data}$"
+            on_help, pattern=f"^{BUTTON_HELP_COMMON.callback_data}|{BUTTON_HELP_ADMIN.callback_data}$",
+            run_async=True
         )
     )
 
-    dp.add_handler(CommandHandler('more', on_request))
+    dp.add_handler(CommandHandler('more', on_request, run_async=True))
 
-    dp.add_handler(CommandHandler('settings', on_settings))
+    dp.add_handler(CommandHandler('settings', on_settings, run_async=True))
     dp.add_handler(
         MessageHandler(
             Filters.regex(r'(?i)^settings$|^настройк[иа]$'),
-            on_settings
+            on_settings,
+            run_async=True
         )
     )
-    dp.add_handler(CallbackQueryHandler(on_settings, pattern=SettingState.MAIN.get_pattern_full()))
-    dp.add_handler(CallbackQueryHandler(on_settings_year, pattern=SettingState.YEAR.get_pattern_full()))
-    dp.add_handler(CallbackQueryHandler(on_settings_limit, pattern=SettingState.LIMIT.get_pattern_full()))
+    dp.add_handler(
+        CallbackQueryHandler(on_settings, pattern=SettingState.MAIN.get_pattern_full(), run_async=True)
+    )
+    dp.add_handler(
+        CallbackQueryHandler(on_settings_year, pattern=SettingState.YEAR.get_pattern_full(), run_async=True)
+    )
+    dp.add_handler(
+        CallbackQueryHandler(on_settings_limit, pattern=SettingState.LIMIT.get_pattern_full(), run_async=True)
+    )
 
     # Возвращение статистики текущего пользователя
-    dp.add_handler(CommandHandler('stats', on_get_user_stats))
+    dp.add_handler(CommandHandler('stats', on_get_user_stats, run_async=True))
     dp.add_handler(
         MessageHandler(
             Filters.regex(r'(?i)^stats$|^статистика$'),
-            on_get_user_stats
+            on_get_user_stats,
+            run_async=True
         )
     )
 
     # Возвращение статистики админа
-    dp.add_handler(CommandHandler('admin_stats', on_get_admin_stats, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('admin_stats', on_get_admin_stats, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^admin[ _]stats$|^статистика[ _]админа$'),
-            on_get_admin_stats
+            on_get_admin_stats,
+            run_async=True
         )
     )
 
     # Возвращение статистики цитат
-    dp.add_handler(CommandHandler('quote_stats', on_get_quote_stats, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('quote_stats', on_get_quote_stats, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(PATTERN_QUOTE_STATS),
-            on_get_quote_stats
+            on_get_quote_stats,
+            run_async=True
         )
     )
-    dp.add_handler(CallbackQueryHandler(on_get_quote_stats, pattern=PATTERN_QUOTE_STATS))
-    dp.add_handler(CallbackQueryHandler(on_get_comics_stats, pattern=PATTERN_COMICS_STATS))
+    dp.add_handler(CallbackQueryHandler(on_get_quote_stats, pattern=PATTERN_QUOTE_STATS, run_async=True))
+    dp.add_handler(CallbackQueryHandler(on_get_comics_stats, pattern=PATTERN_COMICS_STATS, run_async=True))
 
     # Возвращение порядка вызова указанной цитаты у текущего пользователя, сортировка от конца
-    dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]quote (\d+)$'),
-            on_get_used_quote_in_requests
+            on_get_used_quote_in_requests,
+            run_async=True
         )
     )
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'^(\d+)$'),
-            on_get_used_quote_in_requests
+            on_get_used_quote_in_requests,
+            run_async=True
         )
     )
 
     # Возвращение порядка вызова у последней полученный цитаты у текущего пользователя, сортировка от конца
-    dp.add_handler(CommandHandler('get_used_last_quote', on_get_used_last_quote_in_requests, FILTER_BY_ADMIN))
+    dp.add_handler(
+        CommandHandler('get_used_last_quote', on_get_used_last_quote_in_requests, FILTER_BY_ADMIN, run_async=True)
+    )
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote|\?$'),
-            on_get_used_last_quote_in_requests
+            on_get_used_last_quote_in_requests,
+            run_async=True
         )
     )
 
-    dp.add_handler(CommandHandler('get_users_short', on_get_users_short, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('get_users_short', on_get_users_short, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]users[ _]short (\d+)$') | Filters.regex(r'(?i)^get users$')),
-            on_get_users_short
+            on_get_users_short,
+            run_async=True
         )
     )
 
-    dp.add_handler(CommandHandler('get_users', on_get_users, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('get_users', on_get_users, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]users (\d+)$') | Filters.regex(r'(?i)^get users$')),
-            on_get_users
+            on_get_users,
+            run_async=True
         )
     )
 
-    dp.add_handler(CommandHandler('get_quote', on_get_quote))
+    dp.add_handler(CommandHandler('get_quote', on_get_quote, run_async=True))
     dp.add_handler(
         MessageHandler(
             Filters.regex(r'(?i)^get[ _]quote (\d+)$'),
-            on_get_quote
+            on_get_quote,
+            run_async=True
         )
     )
 
-    dp.add_handler(CommandHandler('get_external_quote', on_get_external_quote))
+    dp.add_handler(CommandHandler('get_external_quote', on_get_external_quote, run_async=True))
     dp.add_handler(
         MessageHandler(
             Filters.regex(r'(?i)^get[ _]external[ _]quote (\d+)$'),
-            on_get_external_quote
+            on_get_external_quote,
+            run_async=True
         )
     )
 
-    dp.add_handler(CommandHandler('update_quote', on_update_quote, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('update_quote', on_update_quote, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^update[ _]quote (\d+)$'),
-            on_update_quote
+            on_update_quote,
+            run_async=True
         )
     )
 
-    dp.add_handler(CommandHandler('find_my', on_find_my, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('find_my', on_find_my, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^find[ _]my (.+)$'),
-            on_find_my
+            on_find_my,
+            run_async=True
         )
     )
 
-    dp.add_handler(CommandHandler('find_new', on_find_new, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('find_new', on_find_new, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^find[ _]new (.+)$'),
-            on_find_new
+            on_find_new,
+            run_async=True
         )
     )
 
-    dp.add_handler(CommandHandler('find', on_find, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('find', on_find, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^find (.+)$'),
-            on_find
+            on_find,
+            run_async=True
         )
     )
 
-    dp.add_handler(CallbackQueryHandler(on_get_quotes, pattern=PATTERN_GET_QUOTES))
+    dp.add_handler(CallbackQueryHandler(on_get_quotes, pattern=PATTERN_GET_QUOTES, run_async=True))
 
-    dp.add_handler(MessageHandler(Filters.text, on_request))
-    dp.add_handler(CallbackQueryHandler(on_quote_comics, pattern=r'^\d+$'))
+    dp.add_handler(MessageHandler(Filters.text, on_request, run_async=True))
+    dp.add_handler(CallbackQueryHandler(on_quote_comics, pattern=r'^\d+$', run_async=True))
 
     fill_commands_for_help(dp)
 
