@@ -1039,10 +1039,10 @@ def setup(updater: Updater):
     )
 
     # Возвращение количества цитат в кэше
-    dp.add_handler(CommandHandler('get_cache_length', on_get_cache_length, FILTER_BY_ADMIN, run_async=True))
+    dp.add_handler(CommandHandler('cache', on_get_cache_length, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]cache[ _]length$'),
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^cache$'),
             on_get_cache_length,
             run_async=True
         )
