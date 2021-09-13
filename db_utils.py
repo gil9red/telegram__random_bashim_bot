@@ -8,8 +8,8 @@ import datetime as DT
 import functools
 import logging
 import time
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 # pip install python-telegram-bot
 from telegram import Update
@@ -123,7 +123,7 @@ def get_user_message_repr(user: User) -> str:
     '''.rstrip()
 
 
-def db_create_backup(log: logging.Logger, backup_dir=BACKUP_DIR_NAME, date_fmt='%d%m%y'):
+def db_create_backup(log: logging.Logger, backup_dir=BACKUP_DIR_NAME, date_fmt='%Y-%m-%d'):
     backup_path = Path(backup_dir)
     backup_path.mkdir(parents=True, exist_ok=True)
 
