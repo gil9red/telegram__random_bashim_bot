@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Union, Optional, List
 
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, Bot, ParseMode
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, Bot
 from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filters
 from telegram.ext.filters import MergedFilter
 
