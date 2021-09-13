@@ -444,7 +444,7 @@ def on_request(update: Update, context: CallbackContext) -> Optional[db.Quote]:
 
         user = db.User.get_from(update.effective_user)
         if any(user.get_years_of_quotes().values()):
-            text += '. Попробуйте в настройках убрать фильтрацию цитат по годам.'
+            text += '. Попробуйте в настройках убрать фильтрацию цитат по годам.\n/settings'
 
         reply_info(text, update, context)
         return
