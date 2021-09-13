@@ -140,10 +140,10 @@ def db_create_backup(log: logging.Logger, backup_dir=BACKUP_DIR_NAME, date_fmt='
 
 
 def do_backup(log: logging.Logger):
-    # Каждую неделю, в пятницу, в 02:00
+    # Каждую неделю, в субботу, в 02:00 ночи
     schedule\
         .every().week\
-        .friday.at("02:00")\
+        .saturday.at("02:00")\
         .do(
             lambda: db_create_backup(log)
         )
