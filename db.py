@@ -17,8 +17,8 @@ from playhouse.sqliteq import SqliteQueueDatabase
 
 import telegram
 
-from parsers import bash_im
-from parsers.bash_im import shorten
+from third_party import bash_im
+from third_party.bash_im import shorten
 from config import DIR, IGNORED_LAST_QUOTES, QUOTES_LIMIT
 
 
@@ -290,7 +290,7 @@ class Quote(BaseModel):
                 rating=quote.rating
             )
 
-        for url in quote.comics_url:
+        for url in quote.comics_urls:
             comics_db = Comics.get_or_none(Comics.url == url)
             if not comics_db:
                 Comics.create(

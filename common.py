@@ -18,7 +18,7 @@ from telegram.ext.filters import MergedFilter
 
 import db
 from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS, MAX_MESSAGE_LENGTH
-from parsers import bash_im
+from third_party import bash_im
 
 
 def split_list(items: List, columns: int = 5) -> List[List]:

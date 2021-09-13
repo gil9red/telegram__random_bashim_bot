@@ -28,8 +28,7 @@ from common import (
     get_deep_linking, split_list
 )
 from db_utils import process_request, get_user_message_repr, catch_error
-from parsers import bash_im
-
+from third_party import bash_im
 
 PATTERN_QUOTE_STATS = re.compile(r'(?i)^quote[ _]stats$|^статистика[ _]цитат$')
 PATTERN_QUERY_QUOTE_STATS = 'quote_stats'

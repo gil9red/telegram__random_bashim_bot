@@ -16,8 +16,7 @@ import schedule
 
 import db
 from config import DIR
-from parsers import bash_im
-
+from third_party import bash_im
 
 NEXT_CHECKED_PAGE = DIR / '_NEXT_CHECKED_PAGE.txt'
 
