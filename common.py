@@ -9,6 +9,8 @@ import functools
 import html
 import logging
 import sys
+
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Union, Optional, List
 
@@ -17,7 +19,7 @@ from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filter
 from telegram.ext.filters import MergedFilter
 
 import db
-from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS, MAX_MESSAGE_LENGTH
+from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS, MAX_MESSAGE_LENGTH, DIR_LOG
 from third_party import bash_im
 
 
@@ -32,28 +34,27 @@ def split_list(items: List, columns: int = 5) -> List[List]:
     return result
 
 
-def get_logger(file_name: str, dir_name='logs'):
-    dir_name = Path(dir_name).resolve()
-    dir_name.mkdir(parents=True, exist_ok=True)
-
-    file_name = str(dir_name / Path(file_name).resolve().name) + '.log'
-
-    log = logging.getLogger(__name__)
+def get_logger(
+        name: str,
+        file: Union[str, Path] = 'log.txt',
+        encoding='utf-8',
+        log_stdout=True,
+        log_file=True
+) -> 'logging.Logger':
+    log = logging.getLogger(name)
     log.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('[%(asctime)s] %(filename)s[LINE:%(lineno)d] %(levelname)-8s %(message)s')
+    formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
 
-    fh = logging.FileHandler(file_name, encoding='utf-8')
-    fh.setLevel(logging.DEBUG)
+    if log_file:
+        fh = RotatingFileHandler(file, maxBytes=10000000, backupCount=5, encoding=encoding)
+        fh.setFormatter(formatter)
+        log.addHandler(fh)
 
-    ch = logging.StreamHandler(stream=sys.stdout)
-    ch.setLevel(logging.DEBUG)
-
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    log.addHandler(fh)
-    log.addHandler(ch)
+    if log_stdout:
+        sh = logging.StreamHandler(stream=sys.stdout)
+        sh.setFormatter(formatter)
+        log.addHandler(sh)
 
     return log
 
@@ -108,7 +109,10 @@ ADMIN_COMMANDS = []
 
 START_TIME = DT.datetime.now()
 
-log = get_logger(Path(__file__).resolve().parent.name)
+log = get_logger(
+    __file__,
+    DIR_LOG / f'{Path(__file__).resolve().parent.name}.log'
+)
 
 
 def get_plural_days(n: int) -> str:

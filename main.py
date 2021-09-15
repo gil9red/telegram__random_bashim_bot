@@ -17,7 +17,7 @@ import db
 from config import TOKEN, DIR_COMICS
 from common import log
 from db_utils import do_backup
-from parsers import download_random_quotes, download_main_page_quotes, download_seq_page_quotes
+from parsers import download_random_quotes, download_main_page_quotes, download_seq_page_quotes, run_parser_health_check
 
 
 def main():
@@ -27,7 +27,6 @@ def main():
 
     log.debug('Start')
 
-    # Create the EventHandler and pass it your bot's token.
     updater = Updater(
         TOKEN,
         workers=workers,
@@ -48,6 +47,7 @@ if __name__ == '__main__':
     Thread(target=download_seq_page_quotes, args=[log, DIR_COMICS]).start()
     Thread(target=download_random_quotes, args=[log, DIR_COMICS]).start()
     Thread(target=do_backup, args=[log]).start()
+    Thread(target=run_parser_health_check, args=[log]).start()
 
     while True:
         try:

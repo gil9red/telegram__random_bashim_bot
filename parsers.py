@@ -17,6 +17,7 @@ import schedule
 import db
 from config import DIR
 from third_party import bash_im
+from third_party.notifications import send_telegram_notification_error
 
 NEXT_CHECKED_PAGE = DIR / '_NEXT_CHECKED_PAGE.txt'
 
@@ -178,3 +179,26 @@ def download_seq_page_quotes(log: logging.Logger, dir_comics):
                     log.debug(f'{prefix} Deep sleep: %s minutes', minutes)
 
                     time.sleep(minutes * 60)
+
+
+def run_parser_health_check(log: logging.Logger):
+    prefix = f'[{caller_name()}]'
+
+    def run():
+        try:
+            error_text = bash_im.parser_health_check()
+            if not error_text:
+                return
+
+            log.error(f'{prefix} Error: {error_text!r}')
+            send_telegram_notification_error(log.name, error_text)
+
+        except Exception:
+            log.exception(f'{prefix} Error:')
+
+    # Каждый день в 12:00
+    schedule.every().day.at("12:00").do(run)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
