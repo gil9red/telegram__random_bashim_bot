@@ -19,7 +19,7 @@ from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filter
 from telegram.ext.filters import MergedFilter
 
 import db
-from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, DIR_COMICS, MAX_MESSAGE_LENGTH, DIR_LOG
+from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, MAX_MESSAGE_LENGTH, DIR, DIR_COMICS, DIR_LOG
 from third_party import bash_im
 
 
@@ -110,7 +110,7 @@ ADMIN_COMMANDS = []
 START_TIME = DT.datetime.now()
 
 log = get_logger(
-    __file__,
+    DIR.name,
     DIR_LOG / f'{Path(__file__).resolve().parent.name}.log'
 )
 

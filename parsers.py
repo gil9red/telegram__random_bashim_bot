@@ -190,15 +190,10 @@ def run_parser_health_check(log: logging.Logger):
 
     def run():
         try:
-            error_text = bash_im.parser_health_check()
-            if not error_text:
-                return
-
-            log.error(f'{prefix} Error: {error_text!r}')
-            send_telegram_notification_error(log.name, error_text)
-
-        except Exception:
+            bash_im.parser_health_check(raise_error=True)
+        except Exception as e:
             log.exception(f'{prefix} Error:')
+            send_telegram_notification_error(log.name, str(e))
 
     # Каждый день в 12:00
     schedule.every().day.at("12:00").do(run)

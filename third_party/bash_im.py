@@ -12,7 +12,7 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urljoin
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Tuple
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -247,7 +247,7 @@ def get_total_pages() -> int:
     return int(root.select_one('.pager__input')['max'])
 
 
-def parser_health_check() -> Optional[str]:
+def parser_health_check(raise_error=False) -> Optional[str]:
     """
     Функция проверяет работу парсера.
     Если функция вернет None, значит проблем нет, иначе вернется строка с описанием проблемы.
@@ -299,12 +299,18 @@ def parser_health_check() -> Optional[str]:
         _test_quote(quote, quote_id)
 
     except requests.exceptions.HTTPError as e:
+        if raise_error:
+            raise e
         return f'Сетевая проблема: {str(e)!r}'
 
     except AssertionError as e:
+        if raise_error:
+            raise e
         return f'Обнаружена проблема: {str(e)!r}'
 
     except Exception as e:
+        if raise_error:
+            raise e
         return f'Неизвестная проблема: {str(e)!r}'
 
 
