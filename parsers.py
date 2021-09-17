@@ -120,10 +120,11 @@ def download_main_page_quotes(log: logging.Logger, dir_comics):
                 time.sleep(60)
 
     # Каждый день в 22:00
-    schedule.every().day.at("22:00").do(run)
+    scheduler = schedule.Scheduler()
+    scheduler.every().day.at("22:00").do(run)
 
     while True:
-        schedule.run_pending()
+        scheduler.run_pending()
         time.sleep(60)
 
 
@@ -196,8 +197,9 @@ def run_parser_health_check(log: logging.Logger):
             send_telegram_notification_error(log.name, str(e))
 
     # Каждый день в 12:00
-    schedule.every().day.at("12:00").do(run)
+    scheduler = schedule.Scheduler()
+    scheduler.every().day.at("12:00").do(run)
 
     while True:
-        schedule.run_pending()
+        scheduler.run_pending()
         time.sleep(60)

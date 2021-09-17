@@ -141,13 +141,9 @@ def db_create_backup(log: logging.Logger, backup_dir=BACKUP_DIR_NAME, date_fmt='
 
 def do_backup(log: logging.Logger):
     # Каждую неделю, в субботу, в 02:00 ночи
-    schedule\
-        .every().week\
-        .saturday.at("02:00")\
-        .do(
-            lambda: db_create_backup(log)
-        )
+    scheduler = schedule.Scheduler()
+    scheduler.every().week.saturday.at("02:00").do(db_create_backup, log)
 
     while True:
-        schedule.run_pending()
+        scheduler.run_pending()
         time.sleep(60)
