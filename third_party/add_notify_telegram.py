@@ -4,9 +4,10 @@
 __author__ = 'ipetrash'
 
 
-# SOURCE: https://github.com/gil9red/SimplePyScripts/blob/e86c04660322fd2b7671d7023e565170e24f3114/telegram_notifications/add_notify_use_web.py
+# SOURCE: https://github.com/gil9red/SimplePyScripts/blob/38857704e0821002c21e6840015cc3c0d1dd9b57/telegram_notifications/add_notify_use_web.py
 
 
+import time
 import requests
 
 
@@ -23,8 +24,22 @@ def add_notify(name: str, message: str, type='INFO'):
         'type': type,
     }
 
-    rs = requests.post(URL, json=data)
-    rs.raise_for_status()
+    # Попытки
+    attempts_timeouts = [1, 5, 10, 30, 60]
+
+    while True:
+        try:
+            rs = requests.post(URL, json=data)
+            rs.raise_for_status()
+            return
+
+        except Exception as e:
+            # Если закончились попытки
+            if not attempts_timeouts:
+                raise e
+
+            timeout = attempts_timeouts.pop(0)
+            time.sleep(timeout)
 
 
 if __name__ == '__main__':
