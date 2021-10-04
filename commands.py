@@ -224,7 +224,7 @@ def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
         update, context,
         parse_mode=ParseMode.MARKDOWN,
         disable_web_page_preview=True,
-        reply_to_message_id=update.effective_message.message_id,
+        quote=True,
         reply_markup=reply_markup,
     )
 
@@ -250,7 +250,7 @@ def on_start(update: Update, context: CallbackContext) -> Optional[db.Quote]:
         quote = reply_local_quote(
             update, context,
             quote_id=quote_id,
-            reply_to_message_id=message_id
+            quote=True
         )
 
         # Удаление сообщения с /start при клике на id цитат в сообщении с результатом поиска
@@ -819,7 +819,7 @@ def on_get_quotes(update: Update, context: CallbackContext) -> List[db.Quote]:
         quote = reply_local_quote(
             update, context,
             quote_id=quote_id,
-            reply_to_message_id=from_message_id
+            quote=True
         )
         if quote:
             items.append(quote)
@@ -850,7 +850,7 @@ def on_quote_comics(update: Update, context: CallbackContext):
 
         query.message.reply_media_group(
             media=media,
-            reply_to_message_id=query.message.message_id
+            quote=True
         )
 
 
