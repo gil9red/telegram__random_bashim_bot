@@ -790,11 +790,11 @@ def on_find_new(update: Update, context: CallbackContext):
 
 
 @mega_process
-def on_get_cache_length(update: Update, context: CallbackContext):
+def on_cache(update: Update, context: CallbackContext):
     r"""
     Возвращение количества цитат в кэше:
-     - /get_cache_length
-     - get[ _]cache[ _]length
+     - /cache
+     - cache
     """
 
     quotes = context.user_data.get('quotes', [])
@@ -1038,11 +1038,11 @@ def setup(updater: Updater):
     )
 
     # Возвращение количества цитат в кэше
-    dp.add_handler(CommandHandler('cache', on_get_cache_length, FILTER_BY_ADMIN, run_async=True))
+    dp.add_handler(CommandHandler('cache', on_cache, FILTER_BY_ADMIN, run_async=True))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & Filters.regex(r'(?i)^cache$'),
-            on_get_cache_length,
+            on_cache,
             run_async=True
         )
     )
