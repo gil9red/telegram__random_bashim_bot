@@ -10,6 +10,7 @@ from threading import Thread
 
 # pip install python-telegram-bot
 from telegram.ext import Updater
+from telegram.ext.defaults import Defaults
 
 import commands
 import common
@@ -30,7 +31,7 @@ def main():
     updater = Updater(
         TOKEN,
         workers=workers,
-        use_context=True
+        defaults=Defaults(run_async=True),
     )
     common.BOT = updater.bot
 
