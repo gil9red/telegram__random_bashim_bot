@@ -146,18 +146,18 @@ def reply_local_quote(
         reply_error('Номер цитаты не указан', update, context)
         return
 
-    quote = db.Quote.get_or_none(quote_id)
-    if not quote:
+    quote_obj = db.Quote.get_or_none(quote_id)
+    if not quote_obj:
         reply_error(f'Цитаты #{quote_id} нет в базе', update, context)
         return
 
     reply_quote(
-        quote, update,
+        quote_obj, update,
         context,
         **kwargs
     )
 
-    return quote
+    return quote_obj
 
 
 def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):

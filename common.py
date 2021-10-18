@@ -301,7 +301,7 @@ def reply_info(text: str, update: Update, context: CallbackContext, **kwargs):
 
 
 def reply_quote(
-        quote: Union[bash_im.Quote, db.Quote],
+        quote_obj: Union[bash_im.Quote, db.Quote],
         update: Update,
         context: CallbackContext,
         reply_markup: ReplyKeyboardMarkup = None,
@@ -309,7 +309,7 @@ def reply_quote(
 ):
     # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
     update.effective_message.reply_html(
-        get_html_message(quote),
+        get_html_message(quote_obj),
         disable_web_page_preview=True,
         reply_markup=reply_markup,
         **kwargs
