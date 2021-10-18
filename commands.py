@@ -437,8 +437,8 @@ def on_settings_limit(update: Update, context: CallbackContext):
 
 @mega_process
 def on_request(update: Update, context: CallbackContext) -> Optional[db.Quote]:
-    quote = get_random_quote(update, context)
-    if not quote:
+    quote_obj = get_random_quote(update, context)
+    if not quote_obj:
         text = 'Закончились уникальные цитаты'
 
         user = db.User.get_from(update.effective_user)
@@ -448,11 +448,11 @@ def on_request(update: Update, context: CallbackContext) -> Optional[db.Quote]:
         reply_info(text, update, context)
         return
 
-    log.debug('Quote text (%s)', quote.url)
+    log.debug('Quote text (%s)', quote_obj.url)
 
-    if quote.has_comics():
+    if quote_obj.has_comics():
         reply_markup = InlineKeyboardMarkup.from_button(
-            InlineKeyboardButton("Комикс", callback_data=str(quote.id))
+            InlineKeyboardButton("Комикс", callback_data=str(quote_obj.id))
         )
     else:
         # Недостаточно при запуске отправить ReplyKeyboardMarkup, чтобы она всегда оставалась.
@@ -460,9 +460,9 @@ def on_request(update: Update, context: CallbackContext) -> Optional[db.Quote]:
         # Поэтому при любой возможности, добавляем клавиатуру
         reply_markup = REPLY_KEYBOARD_MARKUP
 
-    reply_quote(quote, update, context, reply_markup)
+    reply_quote(quote_obj, update, context, reply_markup)
 
-    return quote
+    return quote_obj
 
 
 @mega_process
@@ -719,12 +719,12 @@ def on_get_external_quote(update: Update, context: CallbackContext):
         reply_error('Номер цитаты не указан', update, context)
         return
 
-    quote = bash_im.Quote.parse_from(quote_id)
-    if not quote:
+    quote_obj = bash_im.Quote.parse_from(quote_id)
+    if not quote_obj:
         reply_error(f'Цитаты #{quote_id} на сайте нет', update, context)
         return
 
-    reply_quote(quote, update, context)
+    reply_quote(quote_obj, update, context)
 
 
 @mega_process
@@ -847,11 +847,7 @@ def on_quote_comics(update: Update, context: CallbackContext):
         media = [
             InputMediaPhoto(f.open('rb')) for f in files[i: i+max_parts]
         ]
-
-        query.message.reply_media_group(
-            media=media,
-            quote=True
-        )
+        query.message.reply_media_group(media=media, quote=True)
 
 
 @catch_error(log)

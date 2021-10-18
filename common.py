@@ -244,9 +244,9 @@ def update_quote(quote_id: int, update: Update = None, context: CallbackContext 
             need_reply and reply_info(text, update, context)
 
 
-def get_html_message(quote: Union[bash_im.Quote, db.Quote]) -> str:
-    text = html.escape(quote.text)
-    footer = f"""<a href="{quote.url}">{quote.date_str} | #{quote.id}</a>"""
+def get_html_message(quote_obj: Union[bash_im.Quote, db.Quote]) -> str:
+    text = html.escape(quote_obj.text)
+    footer = f"""<a href="{quote_obj.url}">{quote_obj.date_str} | #{quote_obj.id}</a>"""
     return f'{text}\n\n{footer}'
 
 
