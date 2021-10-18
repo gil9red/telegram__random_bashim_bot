@@ -250,7 +250,7 @@ def on_start(update: Update, context: CallbackContext) -> Optional[db.Quote]:
         quote = reply_local_quote(
             update, context,
             quote_id=quote_id,
-            quote=True
+            reply_to_message_id=message_id
         )
 
         # Удаление сообщения с /start при клике на id цитат в сообщении с результатом поиска
@@ -819,7 +819,7 @@ def on_get_quotes(update: Update, context: CallbackContext) -> List[db.Quote]:
         quote = reply_local_quote(
             update, context,
             quote_id=quote_id,
-            quote=True
+            reply_to_message_id=from_message_id,
         )
         if quote:
             items.append(quote)
