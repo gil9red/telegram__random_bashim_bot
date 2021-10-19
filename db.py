@@ -462,8 +462,8 @@ class Error(BaseModel):
             if update.effective_chat:
                 chat_id = update.effective_chat.id
 
-            if update.message:
-                message_id = update.message.message_id
+            if update.effective_message:
+                message_id = update.effective_message.message_id
 
         if isinstance(func, Callable):
             func = func.__name__
