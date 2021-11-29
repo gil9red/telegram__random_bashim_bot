@@ -21,18 +21,21 @@ from parsers import download_random_quotes, download_main_page_quotes, download_
 
 
 def main():
+    log.debug('Start')
+
     cpu_count = os.cpu_count()
     workers = cpu_count
     log.debug('System: CPU_COUNT=%s, WORKERS=%s', cpu_count, workers)
-
-    log.debug('Start')
 
     updater = Updater(
         TOKEN,
         workers=workers,
         defaults=Defaults(run_async=True),
     )
-    common.BOT = updater.bot
+    bot = updater.bot
+    log.debug(f'Bot name {bot.first_name!r} ({bot.name})')
+
+    common.BOT = bot
 
     commands.setup(updater)
 
