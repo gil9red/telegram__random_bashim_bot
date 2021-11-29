@@ -25,7 +25,7 @@ def main():
 
     cpu_count = os.cpu_count()
     workers = cpu_count
-    log.debug('System: CPU_COUNT=%s, WORKERS=%s', cpu_count, workers)
+    log.debug(f'System: CPU_COUNT={cpu_count}, WORKERS={workers}')
 
     updater = Updater(
         TOKEN,
