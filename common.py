@@ -95,8 +95,8 @@ def get_deep_linking(argument, update: Update) -> str:
 
 BOT: Bot = None
 
-REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(
-    [[TEXT_BUTTON_MORE]], resize_keyboard=True
+REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup.from_button(
+    TEXT_BUTTON_MORE, resize_keyboard=True
 )
 
 FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
