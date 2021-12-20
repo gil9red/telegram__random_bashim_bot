@@ -168,12 +168,14 @@ class User(BaseModel):
         )
 
     def get_years_of_quotes(self) -> Dict[int, bool]:
-        years = {x: False for x in Quote.get_years()}
-        if self.settings:
-            for x in self.settings.get_years_of_quotes():
-                years[x] = True
+        years = {year: False for year in Quote.get_years()}
+        for year in self.get_list_years_of_quotes():
+            years[year] = True
 
         return years
+
+    def get_list_years_of_quotes(self) -> List[int]:
+        return self.settings.get_years_of_quotes() if self.settings else []
 
     def set_years_of_quotes(self, data: Dict[int, bool]):
         years = [year for year, is_selected in data.items() if is_selected]
@@ -327,6 +329,22 @@ class Quote(BaseModel):
             .limit(limit)
         )
         return list(query)
+
+    @classmethod
+    def get_number_of_unique_quotes(
+            cls,
+            user_id: Union[int, User],
+            years: List[int] = None,
+    ) -> int:
+        sub_query = Request.get_all_quote_id_by_user(user_id)
+
+        where = cls.id.not_in(sub_query)
+        if years:
+            fn_year = fn.strftime('%Y', cls.date).cast('INTEGER')
+            where = where & fn_year.in_(years)
+
+        query = cls.select().where(where)
+        return query.count()
 
     @classmethod
     def get_all_with_comics(cls, where: ModelSelect = None) -> ModelSelect:
@@ -492,9 +510,11 @@ if __name__ == '__main__':
     print('Admin:', admin)
     # print(*Quote.get_user_unique_random(admin, limit=5), sep='\n')
     # print(*Quote.get_user_unique_random(admin, years=[2004], limit=5), sep='\n')
+    # print(Quote.get_number_of_unique_quotes(admin))
     # print(admin.get_years_of_quotes())
     # admin.set_years_of_quotes({k: True for k in [2004, 2007, 2010]})
     # print(admin.get_years_of_quotes())
+    # print(admin.get_list_years_of_quotes())
     print()
 
     assert admin.find('Arux') == admin.find('ARUX')

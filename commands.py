@@ -550,6 +550,64 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
 
 
 @mega_process
+def on_get_number_of_unique_quotes(update: Update, context: CallbackContext):
+    """
+    Возвращение количества оставшихся уникальных цитат:
+     - /get_number_of_unique_quotes
+    """
+
+    message = update.effective_message
+
+    user = db.User.get_from(update.effective_user)
+    years = user.get_list_years_of_quotes()
+
+    quote_count = db.Quote.get_number_of_unique_quotes(user, years)
+
+    lines = [
+        '<b>Количество оставшихся уникальных цитат.</b>',
+        '',
+        f'Осталось: <b>{quote_count}</b>',
+    ]
+    if years:
+        years_str = ", ".join(f"<b>{year}</b>" for year in years)
+        lines.append(f'Фильтрация по годам: {years_str}')
+
+    text = '\n'.join(lines).strip()
+    message.reply_html(text)
+
+
+@mega_process
+def on_get_detail_of_unique_quotes(update: Update, context: CallbackContext):
+    """
+    Возвращение детального описания количества оставшихся уникальных цитат:
+     - /get_detail_of_unique_quotes
+    """
+
+    message = update.effective_message
+
+    user = db.User.get_from(update.effective_user)
+
+    years_of_quotes = user.get_years_of_quotes()
+    total_count = 0
+    rows = []
+    for year in years_of_quotes:
+        count = db.Quote.get_number_of_unique_quotes(user, years=[year])
+        rows.append(f'    <b>{year}</b>: {count}')
+
+        total_count += count
+
+    lines = [
+        '<b>Количество оставшихся уникальных цитат.</b>',
+        '',
+        f'Всего осталось <b>{total_count}</b>:'
+    ]
+    lines.extend(rows)
+
+    text = '\n'.join(lines).strip()
+    message.reply_html(text)
+
+
+@mega_process
 def on_get_quote_stats(update: Update, context: CallbackContext):
     """
     Получение статистики по цитатам:
@@ -914,6 +972,12 @@ def setup(updater: Updater):
             on_get_admin_stats
         )
     )
+
+    # Возвращение количества оставшихся уникальных цитат
+    dp.add_handler(CommandHandler('get_number_of_unique_quotes', on_get_number_of_unique_quotes, FILTER_BY_ADMIN))
+
+    # Возвращение детального описания количества оставшихся уникальных цитат
+    dp.add_handler(CommandHandler('get_detail_of_unique_quotes', on_get_detail_of_unique_quotes, FILTER_BY_ADMIN))
 
     # Возвращение статистики цитат
     dp.add_handler(CommandHandler('quote_stats', on_get_quote_stats, FILTER_BY_ADMIN))
