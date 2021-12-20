@@ -92,7 +92,7 @@ class BaseModel(Model):
 
 class Settings(BaseModel):
     years_of_quotes = TextField(default='')
-    limit_unique_quotes = IntegerField(null=True)
+    limit_unique_quotes = IntegerField(null=True)  # TODO: Удалить, т.к. ограничения нет смысла использовать
 
     def get_years_of_quotes(self) -> List[int]:
         if not self.years_of_quotes:
@@ -108,9 +108,11 @@ class Settings(BaseModel):
         self.years_of_quotes = text
         self.save()
 
+    # TODO: Удалить, т.к. ограничения нет смысла использовать
     def get_limit_unique_quotes(self) -> int:
         return self.limit_unique_quotes or IGNORED_LAST_QUOTES
 
+    # TODO: Удалить, т.к. ограничения нет смысла использовать
     def set_limit_unique_quotes(self, limit: int):
         self.limit_unique_quotes = limit
         self.save()
@@ -164,7 +166,9 @@ class User(BaseModel):
             self,
             years,
             limit,
-            self.get_limit_unique_quotes()
+            # TODO: Удалить, т.к. ограничения нет смысла использовать
+            # self.get_limit_unique_quotes(),
+            ignored_last_quotes=-1,
         )
 
     def get_years_of_quotes(self) -> Dict[int, bool]:
@@ -188,12 +192,14 @@ class User(BaseModel):
 
         self.settings.set_years_of_quotes(years)
 
+    # TODO: Удалить, т.к. ограничения нет смысла использовать
     def get_limit_unique_quotes(self) -> int:
         if not self.settings:
             return IGNORED_LAST_QUOTES
 
         return self.settings.get_limit_unique_quotes()
 
+    # TODO: Удалить, т.к. ограничения нет смысла использовать
     def set_limit_unique_quotes(self, limit: int):
         if not self.settings:
             self.settings = Settings.create()
@@ -312,6 +318,7 @@ class Quote(BaseModel):
             user_id: Union[int, User],
             years: List[int] = None,
             limit=QUOTES_LIMIT,
+            # TODO: Удалить, т.к. ограничения нет смысла использовать
             ignored_last_quotes=IGNORED_LAST_QUOTES
     ) -> List['Quote']:
         # Last {ignored_last_quotes} returned quote's

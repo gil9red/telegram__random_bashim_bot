@@ -30,6 +30,7 @@ from common import (
 from db_utils import process_request, get_user_message_repr, catch_error
 from third_party import bash_im
 
+
 PATTERN_QUOTE_STATS = re.compile(r'(?i)^quote[ _]stats$|^статистика[ _]цитат$')
 PATTERN_QUERY_QUOTE_STATS = 'quote_stats'
 
@@ -70,7 +71,7 @@ def is_equal_inline_keyboards(keyboard_1: InlineKeyboardMarkup, keyboard_2: Inli
 
 class SettingState(enum.Enum):
     YEAR = " ⁃ Фильтрация получения цитат по годам"
-    LIMIT = " ⁃ Количество получаемых уникальных цитат"
+    LIMIT = " ⁃ Количество получаемых уникальных цитат"  # TODO: Удалить, т.к. ограничения нет смысла использовать
     MAIN = enum.auto()
 
     def get_callback_data(self) -> str:
@@ -325,6 +326,7 @@ def on_settings(update: Update, context: CallbackContext):
         message.reply_text(text, reply_markup=reply_markup)
 
 
+# TODO: Перенести реализацию checkbox/radio в SimplePyScripts
 def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext):
     query = update.callback_query
 
@@ -378,6 +380,8 @@ def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext
     query.edit_message_text(text, reply_markup=reply_markup)
 
 
+# TODO: Перенести реализацию checkbox/radio в SimplePyScripts
+# TODO: Удалить, т.к. ограничения нет смысла использовать
 def _on_reply_limit(log: logging.Logger, update: Update, context: CallbackContext):
     query = update.callback_query
 
@@ -427,6 +431,7 @@ def on_settings_year(update: Update, context: CallbackContext):
     _on_reply_year(log, update, context)
 
 
+# TODO: Удалить, т.к. ограничения нет смысла использовать
 @mega_process
 def on_settings_limit(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -951,6 +956,7 @@ def setup(updater: Updater):
     dp.add_handler(
         CallbackQueryHandler(on_settings_year, pattern=SettingState.YEAR.get_pattern_full())
     )
+    # TODO: Удалить, т.к. ограничения нет смысла использовать
     dp.add_handler(
         CallbackQueryHandler(on_settings_limit, pattern=SettingState.LIMIT.get_pattern_full())
     )
