@@ -153,7 +153,7 @@ class User(BaseModel):
         return user_db
 
     def get_total_quotes(self, with_comics=False) -> int:
-        query = Request.get_all_quote_id_by_user(self.id)
+        query = Request.get_all_quote_id_by_user(self.id).distinct()
         if not with_comics:
             return query.count()
 
@@ -210,7 +210,7 @@ class User(BaseModel):
     # TODO: rename method
     def find(self, regex: str, case_insensitive=True) -> List[int]:
         user_quotes = Quote.id.in_(
-            Request.get_all_quote_id_by_user(self)
+            Request.get_all_quote_id_by_user(self).distinct()
         )
         return Quote.find(
             regex, case_insensitive,
@@ -322,7 +322,7 @@ class Quote(BaseModel):
             ignored_last_quotes=IGNORED_LAST_QUOTES
     ) -> List['Quote']:
         # Last {ignored_last_quotes} returned quote's
-        sub_query = Request.get_all_quote_id_by_user(user_id, ignored_last_quotes)
+        sub_query = Request.get_all_quote_id_by_user(user_id, ignored_last_quotes).distinct()
 
         where = cls.id.not_in(sub_query)
         if years:
@@ -343,7 +343,7 @@ class Quote(BaseModel):
             user_id: Union[int, User],
             years: List[int] = None,
     ) -> int:
-        sub_query = Request.get_all_quote_id_by_user(user_id)
+        sub_query = Request.get_all_quote_id_by_user(user_id).distinct()
 
         where = cls.id.not_in(sub_query)
         if years:
