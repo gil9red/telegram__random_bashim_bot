@@ -1056,7 +1056,13 @@ def setup(updater: Updater):
     dp.add_handler(CommandHandler('get_quote', on_get_quote))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^get[ _]quote (\d+)$|^#(\d+)$'),
+            Filters.regex(r'(?i)^get[ _]quote (\d+)$'),
+            on_get_quote
+        )
+    )
+    dp.add_handler(
+        MessageHandler(
+            Filters.regex(r'(?i)^#(\d+)$'),
             on_get_quote
         )
     )
