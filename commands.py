@@ -559,6 +559,7 @@ def on_get_number_of_unique_quotes(update: Update, context: CallbackContext):
     """
     Возвращение количества оставшихся уникальных цитат:
      - /get_number_of_unique_quotes
+     - ??
     """
 
     message = update.effective_message
@@ -586,6 +587,7 @@ def on_get_detail_of_unique_quotes(update: Update, context: CallbackContext):
     """
     Возвращение детального описания количества оставшихся уникальных цитат:
      - /get_detail_of_unique_quotes
+     - ???
     """
 
     message = update.effective_message
@@ -981,9 +983,21 @@ def setup(updater: Updater):
 
     # Возвращение количества оставшихся уникальных цитат
     dp.add_handler(CommandHandler('get_number_of_unique_quotes', on_get_number_of_unique_quotes, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'^\?\?$'),
+            on_get_number_of_unique_quotes
+        )
+    )
 
     # Возвращение детального описания количества оставшихся уникальных цитат
     dp.add_handler(CommandHandler('get_detail_of_unique_quotes', on_get_detail_of_unique_quotes, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & Filters.regex(r'^\?\?\?$'),
+            on_get_detail_of_unique_quotes
+        )
+    )
 
     # Возвращение статистики цитат
     dp.add_handler(CommandHandler('quote_stats', on_get_quote_stats, FILTER_BY_ADMIN))
@@ -1017,7 +1031,7 @@ def setup(updater: Updater):
     )
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote|\?$'),
+            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote$|^\?$'),
             on_get_used_last_quote_in_requests
         )
     )
