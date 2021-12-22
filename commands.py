@@ -766,6 +766,7 @@ def on_get_quote(update: Update, context: CallbackContext) -> Optional[db.Quote]
     Получение цитаты из базы:
      - /get_quote <номер цитаты>
      - get quote <номер цитаты>
+     - #<номер цитаты>
     """
 
     return reply_local_quote(update, context)
@@ -1055,7 +1056,7 @@ def setup(updater: Updater):
     dp.add_handler(CommandHandler('get_quote', on_get_quote))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^get[ _]quote (\d+)$'),
+            Filters.regex(r'(?i)^get[ _]quote (\d+)$|^#(\d+)$'),
             on_get_quote
         )
     )
