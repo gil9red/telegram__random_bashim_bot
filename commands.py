@@ -5,10 +5,11 @@ __author__ = 'ipetrash'
 
 
 import enum
+import json
 import logging
 import re
 import time
-from typing import Optional, Dict, List, Callable
+from typing import Optional, Dict, List, Callable, Union
 
 # pip install python-telegram-bot
 from telegram import (
@@ -16,10 +17,13 @@ from telegram import (
 )
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 
+# pip install python-telegram-bot-pagination
+from telegram_bot_pagination import InlineKeyboardPaginator
+
 import db
 from config import (
     ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY, LIMIT_UNIQUE_QUOTES,
-    MAX_MESSAGE_LENGTH
+    MAX_MESSAGE_LENGTH, ITEMS_PER_PAGE
 )
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
@@ -38,6 +42,7 @@ PATTERN_QUERY_COMICS_STATS = 'comics_stats'
 PATTERN_COMICS_STATS = re.compile(f'^{PATTERN_QUERY_COMICS_STATS}$')
 
 PATTERN_GET_QUOTES = re.compile(r'^get_(\d+)_([\d,]+)$')
+PATTERN_GET_USERS_SHORT_BY_PAGE = re.compile(r'^get_users_short_by_page_(\d+)$')
 
 
 # SOURCE: https://github.com/gil9red/telegram_bot__gamebook/blob/7b7399c83ae6249da9dc92ea5dc475cc0565edc0/bot/regexp.py#L22
@@ -63,10 +68,19 @@ def mega_process(func) -> Callable:
     )(func)
 
 
-def is_equal_inline_keyboards(keyboard_1: InlineKeyboardMarkup, keyboard_2: InlineKeyboardMarkup) -> bool:
-    keyboard_1 = keyboard_1.to_dict()['inline_keyboard']
-    keyboard_2 = keyboard_2.to_dict()['inline_keyboard']
-    return keyboard_1 == keyboard_2
+def is_equal_inline_keyboards(
+        keyboard_1: Union[InlineKeyboardMarkup, str],
+        keyboard_2: InlineKeyboardMarkup
+) -> bool:
+    if isinstance(keyboard_1, InlineKeyboardMarkup):
+        keyboard_1_inline_keyboard = keyboard_1.to_dict()['inline_keyboard']
+    elif isinstance(keyboard_1, str):
+        keyboard_1_inline_keyboard = json.loads(keyboard_1)['inline_keyboard']
+    else:
+        raise Exception(f'Unsupported format (keyboard_1={type(keyboard_1)})!')
+
+    keyboard_2_inline_keyboard = keyboard_2.to_dict()['inline_keyboard']
+    return keyboard_1_inline_keyboard == keyboard_2_inline_keyboard
 
 
 class SettingState(enum.Enum):
@@ -703,36 +717,60 @@ def on_get_comics_stats(update: Update, context: CallbackContext):
 def on_get_users_short(update: Update, context: CallbackContext):
     r"""
     Получение пользователей (короткая):
-     - /get_users_short (\d+)
-     - get[ _]users[ _]short (\d+)
+     - /get_users_short
+     - get[ _]users[ _]short
     """
+
+    message = update.effective_message
+
+    query = update.callback_query
+    if query:
+        query.answer()
 
     try:
         if context.match and context.match.groups():
-            limit = int(context.match.group(1))
+            page = int(context.match.group(1))
         else:
-            limit = int(context.args[0])
+            page = int(context.args[0])
     except:
-        limit = 50
+        page = 1
 
-    query = db.User.select().order_by(db.User.last_activity.desc()).limit(limit)
+    total_users = db.User.select().count()
+    items_per_page = ITEMS_PER_PAGE
+    order_by = db.User.last_activity.desc()
+    users = db.User.paginating(page=page, items_per_page=items_per_page, order_by=order_by)
+
+    start = ((page - 1) * items_per_page) + 1
+
     items = []
-    for i, user in enumerate(query, 1):
-        parts = []
-        if user.first_name:
-            parts.append(user.first_name.strip())
-        if user.last_name:
-            parts.append(user.last_name.strip())
-        if user.username:
-            parts.append('@' + user.username.strip())
+    for i, user in enumerate(users, start):
+        short_title = user.get_short_title()
+        short_title = f'{i}. {short_title}'
+        items.append(short_title)
 
-        full_name = ' '.join(parts).strip()
-        last_activity = str(user.last_activity).split('.')[0]
-        items.append(f'{i}. {full_name!r}, last_activity: {last_activity}, quotes: {user.get_total_quotes()}')
+    text = 'Пользователи:\n' + '\n'.join(items)
 
-    text = 'Users:\n' + '\n'.join(items)
+    paginator = InlineKeyboardPaginator(
+        page_count=(total_users // items_per_page) + 1,
+        current_page=page,
+        data_pattern=fill_string_pattern(PATTERN_GET_USERS_SHORT_BY_PAGE, '{page}'),
+    )
+    reply_markup = paginator.markup
 
-    update.effective_message.reply_text(text)
+    if query:
+        # Fix error: "telegram.error.BadRequest: Message is not modified"
+        if is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
+            return
+
+        message.edit_text(
+            text,
+            reply_markup=reply_markup,
+        )
+    else:
+        message.reply_text(
+            text,
+            reply_markup=reply_markup,
+        )
 
 
 @mega_process
@@ -1034,10 +1072,11 @@ def setup(updater: Updater):
     dp.add_handler(CommandHandler('get_users_short', on_get_users_short, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]users[ _]short (\d+)$') | Filters.regex(r'(?i)^get users$')),
+            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]users[ _]short$')),
             on_get_users_short
         )
     )
+    dp.add_handler(CallbackQueryHandler(on_get_users_short, pattern=PATTERN_GET_USERS_SHORT_BY_PAGE))
 
     dp.add_handler(CommandHandler('get_users', on_get_users, FILTER_BY_ADMIN))
     dp.add_handler(

@@ -5,9 +5,10 @@ __author__ = 'ipetrash'
 
 
 import datetime as DT
+import re
 import time
-from typing import List, Optional, Union, Callable, Tuple, Dict
 import traceback
+from typing import List, Optional, Union, Callable, Tuple, Dict, Type, Iterable
 
 # pip install peewee
 from peewee import (
@@ -19,7 +20,7 @@ import telegram
 
 from third_party import bash_im
 from third_party.bash_im import shorten
-from config import DIR, IGNORED_LAST_QUOTES, QUOTES_LIMIT
+from config import DIR, IGNORED_LAST_QUOTES, QUOTES_LIMIT, ITEMS_PER_PAGE
 
 
 DB_DIR_NAME = DIR / 'database'
@@ -34,6 +35,11 @@ DB_DIR_NAME_ERROR = DIR / 'database_error'
 DB_FILE_NAME_ERROR = str(DB_DIR_NAME_ERROR / 'database_error.sqlite')
 
 DB_DIR_NAME_ERROR.mkdir(parents=True, exist_ok=True)
+
+
+def get_clear_name(full_name: str) -> str:
+    full_name = re.sub(r'\s{2,}', ' ', full_name)
+    return full_name.strip()
 
 
 # This working with multithreading
@@ -70,6 +76,47 @@ db_error = SqliteQueueDatabase(
 class BaseModel(Model):
     class Meta:
         database = db
+
+    @classmethod
+    def get_first(cls) -> Type['BaseModel']:
+        return cls.select().first()
+
+    @classmethod
+    def get_last(cls) -> Type['BaseModel']:
+        return cls.select().order_by(cls.id.desc()).first()
+
+    @classmethod
+    def paginating(
+            cls,
+            page: int = 1,
+            items_per_page: int = ITEMS_PER_PAGE,
+            order_by: Field = None,
+            filters: Iterable = None,
+    ) -> List[Type['BaseModel']]:
+        query = cls.select()
+
+        if filters:
+            query = query.filter(*filters)
+
+        if order_by:
+            query = query.order_by(order_by)
+
+        query = query.paginate(page, items_per_page)
+        return list(query)
+
+    @classmethod
+    def get_inherited_models(cls) -> List[Type['BaseModel']]:
+        return sorted(cls.__subclasses__(), key=lambda x: x.__name__)
+
+    @classmethod
+    def print_count_of_tables(cls):
+        items = []
+        for sub_cls in cls.get_inherited_models():
+            name = sub_cls.__name__
+            count = sub_cls.select().count()
+            items.append(f'{name}: {count}')
+
+        print(', '.join(items))
 
     def __str__(self):
         fields = []
@@ -216,6 +263,21 @@ class User(BaseModel):
             regex, case_insensitive,
             where=user_quotes,
         )
+
+    def get_short_title(self) -> str:
+        full_name = self.first_name
+        if self.last_name:
+            full_name += ' ' + self.last_name
+
+        full_name = shorten(full_name)
+
+        if self.username:
+            full_name += ' @' + self.username
+
+        full_name = get_clear_name(full_name)
+        last_activity = f'{self.last_activity:%d/%m/%Y %H:%M:%S}'
+
+        return f'{full_name!r}, last_activity: {last_activity}, quotes: {self.get_total_quotes()}'
 
 
 # SOURCE: https://core.telegram.org/bots/api#chat
@@ -512,6 +574,9 @@ db_error.create_tables([Error])
 
 
 if __name__ == '__main__':
+    BaseModel.print_count_of_tables()
+    print()
+
     from config import ADMIN_USERNAME
     admin: User = User.get(User.username == ADMIN_USERNAME[1:])
     print('Admin:', admin)

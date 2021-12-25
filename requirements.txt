@@ -17,3 +17,4 @@ tornado==6.1
 tzdata==2021.2.post0
 tzlocal==3.0
 urllib3==1.26.7
+python-telegram-bot-pagination==0.0.2
