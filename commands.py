@@ -1015,13 +1015,7 @@ def setup(updater: Updater):
     dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]quote (\d+)$'),
-            on_get_used_quote_in_requests
-        )
-    )
-    dp.add_handler(
-        MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'^(\d+)$'),
+            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]used[ _]quote (\d+)$') | Filters.regex(r'^(\d+)$')),
             on_get_used_quote_in_requests
         )
     )
@@ -1056,13 +1050,7 @@ def setup(updater: Updater):
     dp.add_handler(CommandHandler('get_quote', on_get_quote))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^get[ _]quote (\d+)$'),
-            on_get_quote
-        )
-    )
-    dp.add_handler(
-        MessageHandler(
-            Filters.regex(r'(?i)^#(\d+)$'),
+            Filters.regex(r'(?i)^get[ _]quote (\d+)$') | Filters.regex(r'(?i)^#(\d+)$'),
             on_get_quote
         )
     )
