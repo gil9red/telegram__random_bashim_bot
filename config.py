@@ -31,6 +31,18 @@ ADMIN_USERNAME = '@ilya_petrash'
 DIR_COMICS = DIR / 'comics'
 DIR_COMICS.mkdir(parents=True, exist_ok=True)
 
+DB_DIR_NAME = DIR / 'database'
+DB_DIR_NAME.mkdir(parents=True, exist_ok=True)
+
+DB_FILE_NAME = str(DB_DIR_NAME / 'database.sqlite')
+
+BACKUP_DIR_NAME = DIR / 'backup'
+
+DB_DIR_NAME_ERROR = DIR / 'database_error'
+DB_DIR_NAME_ERROR.mkdir(parents=True, exist_ok=True)
+
+DB_FILE_NAME_ERROR = str(DB_DIR_NAME_ERROR / 'database_error.sqlite')
+
 URL = 'https://bash.im/random'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:48.0) Gecko/20100101 Firefox/48.0'
 

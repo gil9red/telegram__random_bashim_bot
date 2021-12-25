@@ -18,9 +18,9 @@ from telegram.ext import CallbackContext
 # pip install schedule
 import schedule
 
-from config import ERROR_TEXT
+from config import ERROR_TEXT, DB_DIR_NAME, BACKUP_DIR_NAME
 from common import reply_error
-from db import DB_DIR_NAME, BACKUP_DIR_NAME, User, Chat, Quote, Request, Error
+from db import User, Chat, Quote, Request, Error
 
 
 def process_request(log: logging.Logger):

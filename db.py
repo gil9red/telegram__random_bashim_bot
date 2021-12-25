@@ -20,21 +20,7 @@ import telegram
 
 from third_party import bash_im
 from third_party.bash_im import shorten
-from config import DIR, IGNORED_LAST_QUOTES, QUOTES_LIMIT, ITEMS_PER_PAGE
-
-
-DB_DIR_NAME = DIR / 'database'
-DB_DIR_NAME.mkdir(parents=True, exist_ok=True)
-
-DB_FILE_NAME = str(DB_DIR_NAME / 'database.sqlite')
-
-BACKUP_DIR_NAME = DIR / 'backup'
-
-
-DB_DIR_NAME_ERROR = DIR / 'database_error'
-DB_FILE_NAME_ERROR = str(DB_DIR_NAME_ERROR / 'database_error.sqlite')
-
-DB_DIR_NAME_ERROR.mkdir(parents=True, exist_ok=True)
+from config import IGNORED_LAST_QUOTES, QUOTES_LIMIT, ITEMS_PER_PAGE, DB_FILE_NAME, DB_FILE_NAME_ERROR
 
 
 def get_clear_name(full_name: str) -> str:

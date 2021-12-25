@@ -8,8 +8,7 @@ __author__ = 'ipetrash'
 
 
 from playhouse.migrate import *
-from db import DB_FILE_NAME
-
+from config import DB_FILE_NAME
 
 db = SqliteDatabase(DB_FILE_NAME)
 migrator = SqliteMigrator(db)
