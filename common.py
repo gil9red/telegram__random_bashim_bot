@@ -180,19 +180,24 @@ def log_func(log: logging.Logger):
     return actual_decorator
 
 
-def update_quote(quote_id: int, update: Update = None, context: CallbackContext = None):
+def update_quote(
+        quote_id: int,
+        update: Update = None,
+        context: CallbackContext = None,
+        log: logging.Logger = None,
+):
     need_reply = update and context
 
     quote_bashim = bash_im.Quote.parse_from(quote_id)
     if not quote_bashim:
         text = f'Цитаты #{quote_id} на сайте нет'
-        log.info(text)
+        log and log.info(text)
         need_reply and reply_error(text, update, context)
         return
 
     quote_db: db.Quote = db.Quote.get_or_none(quote_id)
     if not quote_db:
-        log.info(f'Цитаты #{quote_id} в базе нет, будет создание цитаты')
+        log and log.info(f'Цитаты #{quote_id} в базе нет, будет создание цитаты')
 
         # При отсутствии, цитата будет добавлена в базу
         db.Quote.get_from(quote_bashim)
@@ -201,7 +206,7 @@ def update_quote(quote_id: int, update: Update = None, context: CallbackContext 
         quote_bashim.download_comics(DIR_COMICS)
 
         text = f'Цитата #{quote_id} добавлена в базу'
-        log.info(text)
+        log and log.info(text)
         need_reply and reply_info(text, update, context)
 
     else:
@@ -217,12 +222,12 @@ def update_quote(quote_id: int, update: Update = None, context: CallbackContext 
             quote_db.save()
 
             text = f'Цитата #{quote_id} обновлена ({", ".join(modified_list)})'
-            log.info(text)
+            log and log.info(text)
             need_reply and reply_info(text, update, context)
 
         else:
             text = f'Нет изменений в цитате #{quote_id}'
-            log.info(text)
+            log and log.info(text)
             need_reply and reply_info(text, update, context)
 
 

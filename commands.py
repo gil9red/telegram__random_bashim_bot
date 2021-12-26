@@ -844,7 +844,7 @@ def on_update_quote(update: Update, context: CallbackContext):
         reply_error('Номер цитаты не указан', update, context)
         return
 
-    update_quote(quote_id, update, context)
+    update_quote(quote_id, update, context, log)
 
 
 @mega_process
