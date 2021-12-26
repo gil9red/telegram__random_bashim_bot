@@ -7,6 +7,7 @@ __author__ = 'ipetrash'
 import datetime as DT
 import functools
 import html
+import inspect
 import logging
 import sys
 
@@ -21,6 +22,23 @@ from telegram.ext.filters import MergedFilter
 import db
 from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, MAX_MESSAGE_LENGTH, DIR, DIR_COMICS, DIR_LOG
 from third_party import bash_im
+
+
+BOT: Bot = None
+
+REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup.from_button(
+    TEXT_BUTTON_MORE, resize_keyboard=True
+)
+
+FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
+
+BUTTON_HELP_COMMON = InlineKeyboardButton('⬅️ Общие команды', callback_data='help_common')
+BUTTON_HELP_ADMIN = InlineKeyboardButton('➡️ Команды админа', callback_data='help_admin')
+
+COMMON_COMMANDS: List[str] = []
+ADMIN_COMMANDS: List[str] = []
+
+START_TIME = DT.datetime.now()
 
 
 def split_list(items: List, columns: int = 5) -> List[List]:
@@ -93,28 +111,6 @@ def get_deep_linking(argument, update: Update) -> str:
     return f'[{argument}](https://t.me/{bot_name}?start={argument}_{from_message_id})'
 
 
-BOT: Bot = None
-
-REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup.from_button(
-    TEXT_BUTTON_MORE, resize_keyboard=True
-)
-
-FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
-
-BUTTON_HELP_COMMON = InlineKeyboardButton('⬅️ Общие команды', callback_data='help_common')
-BUTTON_HELP_ADMIN = InlineKeyboardButton('➡️ Команды админа', callback_data='help_admin')
-
-COMMON_COMMANDS = []
-ADMIN_COMMANDS = []
-
-START_TIME = DT.datetime.now()
-
-log = get_logger(
-    DIR.name,
-    DIR_LOG / f'{Path(__file__).resolve().parent.name}.log'
-)
-
-
 def get_plural_days(n: int) -> str:
     days = ['день', 'дня', 'дней']
 
@@ -141,7 +137,7 @@ def fill_commands_for_help(dispatcher):
             if not isinstance(command, (CommandHandler, MessageHandler)):
                 continue
 
-            help_command = get_doc(command.callback)
+            help_command = inspect.getdoc(command.callback)
             if not help_command:
                 continue
 
@@ -314,3 +310,9 @@ def reply_quote(
         reply_markup=reply_markup,
         **kwargs
     )
+
+
+log = get_logger(
+    DIR.name,
+    DIR_LOG / f'{Path(__file__).resolve().parent.name}.log'
+)
