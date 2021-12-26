@@ -91,20 +91,6 @@ def has_admin_filter(filter_handler) -> bool:
     return False
 
 
-def get_doc(obj) -> Optional[str]:
-    if not obj or not obj.__doc__:
-        return
-
-    items = []
-    for line in obj.__doc__.splitlines():
-        if line.startswith('    '):
-            line = line[4:]
-
-        items.append(line)
-
-    return '\n'.join(items).strip()
-
-
 def get_deep_linking(argument, update: Update) -> str:
     bot_name = BOT.name.lstrip('@')
     from_message_id = update.effective_message.message_id
