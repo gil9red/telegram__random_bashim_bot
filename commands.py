@@ -23,14 +23,14 @@ from config import (
 )
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
-    update_quote, reply_help, reply_error, reply_quote, reply_info,
-    BUTTON_HELP_COMMON, BUTTON_HELP_ADMIN, START_TIME, get_elapsed_time,
+    update_quote, reply_help, reply_error, reply_quote, reply_info, START_TIME, get_elapsed_time,
     get_deep_linking, split_list, get_page, is_equal_inline_keyboards, reply_text_or_edit_with_keyboard_paginator
 )
 from db_utils import process_request, get_user_message_repr, catch_error
 from regexp_patterns import (
-    PATTERN_QUOTE_STATS, PATTERN_QUERY_QUOTE_STATS, PATTERN_COMICS_STATS, PATTERN_GET_QUOTES, \
+    PATTERN_QUOTE_STATS, PATTERN_QUERY_QUOTE_STATS, PATTERN_COMICS_STATS, PATTERN_GET_QUOTES,
     PATTERN_GET_USERS_SHORT_BY_PAGE, PATTERN_GET_USER_BY_PAGE,
+    PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN,
     fill_string_pattern
 )
 from third_party import bash_im
@@ -714,7 +714,8 @@ def on_get_users_short(update: Update, context: CallbackContext):
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query, text,
-        page_count=(total_users // items_per_page) + 1,
+        page_count=total_users,
+        items_per_page=items_per_page,
         current_page=page,
         data_pattern=fill_string_pattern(PATTERN_GET_USERS_SHORT_BY_PAGE, '{page}'),
     )
@@ -735,16 +736,17 @@ def on_get_users(update: Update, context: CallbackContext):
         query.answer()
 
     page = get_page(context)
-
     total_users = db.User.select().count()
+    items_per_page = 1
 
-    user = db.User.get_by_page(page=page, items_per_page=1)[0]
+    user = db.User.get_by_page(page=page, items_per_page=items_per_page)[0]
     description = get_user_message_repr(user)
     text = f'Пользователь №{page}:\n{description}'
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query, text,
         page_count=total_users,
+        items_per_page=items_per_page,
         current_page=page,
         data_pattern=fill_string_pattern(PATTERN_GET_USER_BY_PAGE, '{page}'),
     )
@@ -930,7 +932,12 @@ def setup(updater: Updater):
     )
     dp.add_handler(
         CallbackQueryHandler(
-            on_help, pattern=f"^{BUTTON_HELP_COMMON.callback_data}|{BUTTON_HELP_ADMIN.callback_data}$"
+            on_help, pattern=PATTERN_HELP_COMMON
+        )
+    )
+    dp.add_handler(
+        CallbackQueryHandler(
+            on_help, pattern=PATTERN_HELP_ADMIN
         )
     )
 

@@ -10,6 +10,7 @@ import html
 import inspect
 import json
 import logging
+import math
 import sys
 
 from logging.handlers import RotatingFileHandler
@@ -26,7 +27,10 @@ from telegram.ext.filters import MergedFilter
 from telegram_bot_pagination import InlineKeyboardPaginator
 
 import db
-from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, MAX_MESSAGE_LENGTH, DIR, DIR_COMICS, DIR_LOG
+from config import (
+    HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, MAX_MESSAGE_LENGTH, DIR, DIR_COMICS, DIR_LOG, COMMANDS_PER_PAGE
+)
+from regexp_patterns import PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN, fill_string_pattern
 from third_party import bash_im
 
 
@@ -38,8 +42,6 @@ REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup.from_button(
 
 FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
 
-BUTTON_HELP_COMMON = InlineKeyboardButton('⬅️ Общие команды', callback_data='help_common')
-BUTTON_HELP_ADMIN = InlineKeyboardButton('➡️ Команды админа', callback_data='help_admin')
 
 COMMON_COMMANDS: List[str] = []
 ADMIN_COMMANDS: List[str] = []
@@ -195,16 +197,29 @@ def reply_text_or_edit_with_keyboard(
 
 
 def reply_text_or_edit_with_keyboard_paginator(
-    message: Message,
-    query: Optional[CallbackQuery],
-    text: str,
-    page_count: int, current_page: int, data_pattern: str,
+        message: Message,
+        query: Optional[CallbackQuery],
+        text: str,
+        page_count: int,
+        items_per_page: int,
+        current_page: int,
+        data_pattern: str,
+        before_inline_buttons: List[InlineKeyboardButton] = None,
+        after_inline_buttons: List[InlineKeyboardButton] = None,
 ):
+    page_count = math.ceil(page_count / items_per_page)
+
     paginator = InlineKeyboardPaginator(
         page_count=page_count,
         current_page=current_page,
         data_pattern=data_pattern,
     )
+    if before_inline_buttons:
+        paginator.add_before(*before_inline_buttons)
+
+    if after_inline_buttons:
+        paginator.add_after(*after_inline_buttons)
+
     reply_markup = paginator.markup
 
     reply_text_or_edit_with_keyboard(
@@ -319,35 +334,59 @@ def get_html_message(quote_obj: Union[bash_im.Quote, db.Quote]) -> str:
 def reply_help(update: Update, context: CallbackContext):
     query = update.callback_query
     message = update.effective_message
-    query_data = None
 
     # Если функция вызвана из CallbackQueryHandler
     if query:
         query.answer()
         query_data = query.data
+    else:
+        query_data = None
+
+    # По умолчанию, показываем общие команды
+    # Если вызвано через CallbackQueryHandler, то проверяем по типу данных
+    show_common_help = True
+    if query_data:
+        show_common_help = bool(PATTERN_HELP_COMMON.search(query_data))
+
+    items_per_page = COMMANDS_PER_PAGE
+    page = get_page(context)
+
+    if show_common_help:
+        pattern_help = PATTERN_HELP_COMMON
+        all_items = COMMON_COMMANDS
+        button_help_change_type_page = InlineKeyboardButton(
+            '➡️ Команды админа', callback_data=fill_string_pattern(PATTERN_HELP_ADMIN, 1)
+        )
+    else:
+        pattern_help = PATTERN_HELP_ADMIN
+        all_items = ADMIN_COMMANDS
+        button_help_change_type_page = InlineKeyboardButton(
+            '⬅️ Общие команды', callback_data=fill_string_pattern(PATTERN_HELP_COMMON, 1)
+        )
+
+    # Элементы текущей страницы
+    items = all_items[(page - 1) * items_per_page: page * items_per_page]
 
     username = update.effective_user.username
     is_admin = username == ADMIN_USERNAME[1:]
-
-    show_common_help = True
-    if query_data:
-        show_common_help = query_data.endswith('common')
-
-    text_common = HELP_TEXT + '\n\n' + '\n\n'.join(COMMON_COMMANDS)
-    text_admin = '\n\n'.join(ADMIN_COMMANDS)
-
     if is_admin:
-        text = text_common if show_common_help else text_admin
-        next_button = BUTTON_HELP_ADMIN if show_common_help else BUTTON_HELP_COMMON
-        reply_markup = InlineKeyboardMarkup.from_button(next_button)
+        after_inline_buttons = [button_help_change_type_page]
     else:
-        text = text_common
-        reply_markup = REPLY_KEYBOARD_MARKUP
+        after_inline_buttons = None
 
-    if query:
-        message.edit_text(text, reply_markup=reply_markup)
-    else:
-        message.reply_text(text, reply_markup=reply_markup)
+    text = '\n\n'.join(items)
+    if show_common_help:
+        text = HELP_TEXT + '\n\n' + text
+
+    reply_text_or_edit_with_keyboard_paginator(
+        message, query,
+        text,
+        page_count=len(all_items),
+        items_per_page=items_per_page,
+        current_page=page,
+        data_pattern=fill_string_pattern(pattern_help, '{page}'),
+        after_inline_buttons=after_inline_buttons,
+    )
 
 
 def reply_error(text: str, update: Update, context: CallbackContext, **kwargs):

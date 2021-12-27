@@ -10,7 +10,12 @@ import re
 PATTERN_QUOTE_STATS = re.compile(r'(?i)^quote[ _]stats$|^статистика[ _]цитат$')
 PATTERN_QUERY_QUOTE_STATS = re.compile(f'^quote_stats$')
 PATTERN_COMICS_STATS = re.compile(f'^comics_stats$')
+
 PATTERN_GET_QUOTES = re.compile(r'^get_(\d+)_([\d,]+)$')
+
+PATTERN_HELP_COMMON = re.compile(r'^help_common_by_page_(\d+)$')
+PATTERN_HELP_ADMIN = re.compile(r'^help_admin_by_page_(\d+)$')
+
 PATTERN_GET_USERS_SHORT_BY_PAGE = re.compile(r'^get_users_short_by_page_(\d+)$')
 PATTERN_GET_USER_BY_PAGE = re.compile(r'^get_user_by_page_(\d+)$')
 
