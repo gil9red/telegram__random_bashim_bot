@@ -180,7 +180,7 @@ def reply_text_or_edit_with_keyboard(
     # Для запросов CallbackQuery нужно менять текущее сообщение
     if query:
         # Fix error: "telegram.error.BadRequest: Message is not modified"
-        if is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
+        if text == query.message.text and is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
             return
 
         message.edit_text(
