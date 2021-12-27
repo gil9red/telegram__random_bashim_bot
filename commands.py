@@ -28,24 +28,12 @@ from common import (
     get_deep_linking, split_list, get_page, is_equal_inline_keyboards, reply_text_or_edit_with_keyboard_paginator
 )
 from db_utils import process_request, get_user_message_repr, catch_error
+from regexp_patterns import (
+    PATTERN_QUOTE_STATS, PATTERN_QUERY_QUOTE_STATS, PATTERN_COMICS_STATS, PATTERN_GET_QUOTES, \
+    PATTERN_GET_USERS_SHORT_BY_PAGE, PATTERN_GET_USER_BY_PAGE,
+    fill_string_pattern
+)
 from third_party import bash_im
-
-
-PATTERN_QUOTE_STATS = re.compile(r'(?i)^quote[ _]stats$|^статистика[ _]цитат$')
-PATTERN_QUERY_QUOTE_STATS = 'quote_stats'
-
-PATTERN_COMICS_STATS = re.compile(f'^comics_stats$')
-
-PATTERN_GET_QUOTES = re.compile(r'^get_(\d+)_([\d,]+)$')
-PATTERN_GET_USERS_SHORT_BY_PAGE = re.compile(r'^get_users_short_by_page_(\d+)$')
-PATTERN_GET_USER_BY_PAGE = re.compile(r'^get_user_by_page_(\d+)$')
-
-
-# SOURCE: https://github.com/gil9red/telegram_bot__gamebook/blob/7b7399c83ae6249da9dc92ea5dc475cc0565edc0/bot/regexp.py#L22
-def fill_string_pattern(pattern: re.Pattern, *args) -> str:
-    pattern = pattern.pattern
-    pattern = pattern.strip('^$')
-    return re.sub(r'\(.+?\)', '{}', pattern).format(*args)
 
 
 def composed(*decs) -> Callable:
@@ -684,7 +672,7 @@ def on_get_comics_stats(update: Update, context: CallbackContext):
     '''
 
     reply_markup = InlineKeyboardMarkup.from_button(
-        InlineKeyboardButton('⬅️ Назад', callback_data=PATTERN_QUERY_QUOTE_STATS)
+        InlineKeyboardButton('⬅️ Назад', callback_data=fill_string_pattern(PATTERN_QUERY_QUOTE_STATS))
     )
 
     message.edit_text(
@@ -1010,7 +998,7 @@ def setup(updater: Updater):
             on_get_quote_stats
         )
     )
-    dp.add_handler(CallbackQueryHandler(on_get_quote_stats, pattern=PATTERN_QUOTE_STATS))
+    dp.add_handler(CallbackQueryHandler(on_get_quote_stats, pattern=PATTERN_QUERY_QUOTE_STATS))
     dp.add_handler(CallbackQueryHandler(on_get_comics_stats, pattern=PATTERN_COMICS_STATS))
 
     # Возвращение порядка вызова указанной цитаты у текущего пользователя, сортировка от конца
