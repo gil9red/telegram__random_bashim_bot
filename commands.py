@@ -737,10 +737,9 @@ def on_get_users_short(update: Update, context: CallbackContext):
 
     total_users = db.User.select().count()
     items_per_page = ITEMS_PER_PAGE
-    order_by = db.User.last_activity.desc()
-    users = db.User.paginating(page=page, items_per_page=items_per_page, order_by=order_by)
-
     start = ((page - 1) * items_per_page) + 1
+
+    users = db.User.get_by_page(page=page, items_per_page=items_per_page)
 
     items = []
     for i, user in enumerate(users, start):

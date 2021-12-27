@@ -250,6 +250,22 @@ class User(BaseModel):
             where=user_quotes,
         )
 
+    @classmethod
+    def get_by_page(
+            cls,
+            page: int = 1,
+            items_per_page: int = ITEMS_PER_PAGE,
+            order_by: Field = None,
+    ) -> List['User']:
+        if not order_by:
+            order_by = cls.last_activity.desc()
+
+        return cls.paginating(
+            page=page,
+            items_per_page=items_per_page,
+            order_by=order_by
+        )
+
     def get_short_title(self) -> str:
         full_name = self.first_name
         if self.last_name:
