@@ -111,7 +111,7 @@ def catch_error(log: logging.Logger):
 
 
 def get_user_message_repr(user: User) -> str:
-    return f'''
+    return f'''\
     id: {user.id}
     first_name: {user.first_name}
     last_name: {user.last_name}
