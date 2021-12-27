@@ -117,7 +117,7 @@ def get_user_message_repr(user: User) -> str:
     last_name: {user.last_name}
     username: {user.username}
     language_code: {user.language_code}
-    last_activity: {user.last_activity}
+    last_activity: {user.last_activity:%d/%m/%Y %H:%M:%S}
     quotes: {user.get_total_quotes()}
     with comics: {user.get_total_quotes(with_comics=True)}
     '''.rstrip()
