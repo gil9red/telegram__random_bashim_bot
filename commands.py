@@ -34,8 +34,7 @@ from third_party import bash_im
 PATTERN_QUOTE_STATS = re.compile(r'(?i)^quote[ _]stats$|^статистика[ _]цитат$')
 PATTERN_QUERY_QUOTE_STATS = 'quote_stats'
 
-PATTERN_QUERY_COMICS_STATS = 'comics_stats'
-PATTERN_COMICS_STATS = re.compile(f'^{PATTERN_QUERY_COMICS_STATS}$')
+PATTERN_COMICS_STATS = re.compile(f'^comics_stats$')
 
 PATTERN_GET_QUOTES = re.compile(r'^get_(\d+)_([\d,]+)$')
 PATTERN_GET_USERS_SHORT_BY_PAGE = re.compile(r'^get_users_short_by_page_(\d+)$')
@@ -640,7 +639,7 @@ def on_get_quote_stats(update: Update, context: CallbackContext):
     '''
 
     reply_markup = InlineKeyboardMarkup.from_button(
-        InlineKeyboardButton('➡️ Комиксы', callback_data=PATTERN_QUERY_COMICS_STATS)
+        InlineKeyboardButton('➡️ Комиксы', callback_data=fill_string_pattern(PATTERN_COMICS_STATS))
     )
 
     is_new = not message.edit_date
