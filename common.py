@@ -8,16 +8,22 @@ import datetime as DT
 import functools
 import html
 import inspect
+import json
 import logging
 import sys
 
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Union, Optional, List
+from typing import Union, List, Optional
 
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, Bot
+from telegram import (
+    Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, Bot, Message, CallbackQuery
+)
 from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filters
 from telegram.ext.filters import MergedFilter
+
+# pip install python-telegram-bot-pagination
+from telegram_bot_pagination import InlineKeyboardPaginator
 
 import db
 from config import HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, MAX_MESSAGE_LENGTH, DIR, DIR_COMICS, DIR_LOG
@@ -133,6 +139,79 @@ def fill_commands_for_help(dispatcher):
             else:
                 if help_command not in COMMON_COMMANDS:
                     COMMON_COMMANDS.append(help_command)
+
+
+def is_equal_inline_keyboards(
+        keyboard_1: Union[InlineKeyboardMarkup, str],
+        keyboard_2: InlineKeyboardMarkup
+) -> bool:
+    if isinstance(keyboard_1, InlineKeyboardMarkup):
+        keyboard_1_inline_keyboard = keyboard_1.to_dict()['inline_keyboard']
+    elif isinstance(keyboard_1, str):
+        keyboard_1_inline_keyboard = json.loads(keyboard_1)['inline_keyboard']
+    else:
+        raise Exception(f'Unsupported format (keyboard_1={type(keyboard_1)})!')
+
+    keyboard_2_inline_keyboard = keyboard_2.to_dict()['inline_keyboard']
+    return keyboard_1_inline_keyboard == keyboard_2_inline_keyboard
+
+
+def get_page(
+        context: CallbackContext,
+        default_page: int = 1
+) -> int:
+    try:
+        if context.match and context.match.groups():
+            page = int(context.match.group(1))
+        else:
+            page = int(context.args[0])
+    except:
+        page = default_page
+
+    return page
+
+
+def reply_text_or_edit_with_keyboard(
+    message: Message,
+    query: Optional[CallbackQuery],
+    text: str,
+    reply_markup: Union[InlineKeyboardMarkup, str],
+):
+    # Для запросов CallbackQuery нужно менять текущее сообщение
+    if query:
+        # Fix error: "telegram.error.BadRequest: Message is not modified"
+        if is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
+            return
+
+        message.edit_text(
+            text,
+            reply_markup=reply_markup,
+        )
+    else:
+        message.reply_text(
+            text,
+            reply_markup=reply_markup,
+        )
+
+
+def reply_text_or_edit_with_keyboard_paginator(
+    message: Message,
+    query: Optional[CallbackQuery],
+    text: str,
+    page_count: int, current_page: int, data_pattern: str,
+):
+    paginator = InlineKeyboardPaginator(
+        page_count=page_count,
+        current_page=current_page,
+        data_pattern=data_pattern,
+    )
+    reply_markup = paginator.markup
+
+    reply_text_or_edit_with_keyboard(
+        message, query,
+        text,
+        reply_markup,
+    )
 
 
 def log_func(log: logging.Logger):
