@@ -472,6 +472,34 @@ class Quote(BaseModel):
                 .where(expr)
         ]
 
+    @classmethod
+    def paginating_by_date(
+            cls,
+            page: int = 1,
+            items_per_page: int = ITEMS_PER_PAGE,
+            date: DT.date = None,
+    ) -> List['Quote']:
+        assert date, "Parameter 'date' must be defined!"
+
+        return cls.paginating(
+            page=page,
+            items_per_page=items_per_page,
+            order_by=cls.id.asc(),
+            filters=[cls.date == date]
+        )
+
+    @classmethod
+    def get_nearest_dates(
+            cls,
+            date: DT.date = None
+    ) -> Tuple[Optional[DT.date], Optional[DT.date]]:
+        query_nearest_before = cls.select(cls.date).where(cls.date < date).order_by(cls.date.desc()).limit(1).first()
+        query_nearest_after = cls.select(cls.date).where(cls.date > date).order_by(cls.date.asc()).limit(1).first()
+        return (
+            query_nearest_before.date if query_nearest_before else None,
+            query_nearest_after.date if query_nearest_after else None,
+        )
+
     def __str__(self):
         return self.__class__.__name__ + \
                f'(id={self.id}, url={self.url!r}, text={shorten(self.text)!r}, ' \
@@ -589,6 +617,15 @@ if __name__ == '__main__':
     # admin.set_years_of_quotes({k: True for k in [2004, 2007, 2010]})
     # print(admin.get_years_of_quotes())
     # print(admin.get_list_years_of_quotes())
+    print()
+
+    date = DT.date.fromisoformat('2006-01-08')
+    items = Quote.paginating_by_date(date=date)
+    print(len(items), items)  # 0 []
+
+    nearest_date_before, nearest_date_after = Quote.get_nearest_dates(date)
+    print(nearest_date_before, nearest_date_after)
+    # 2006-01-05 2006-01-11
     print()
 
     assert admin.find('Arux') == admin.find('ARUX')
