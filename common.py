@@ -17,6 +17,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Union, List, Optional
 
+import telegram.error
 from telegram import (
     Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, Bot, Message, CallbackQuery
 )
@@ -187,11 +188,18 @@ def reply_text_or_edit_with_keyboard(
         if text == query.message.text and is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
             return
 
-        message.edit_text(
-            text,
-            reply_markup=reply_markup,
-            **kwargs,
-        )
+        try:
+            message.edit_text(
+                text,
+                reply_markup=reply_markup,
+                **kwargs,
+            )
+        except telegram.error.BadRequest as e:
+            if 'Message is not modified' in str(e):
+                return
+
+            raise e
+
     else:
         message.reply_text(
             text,

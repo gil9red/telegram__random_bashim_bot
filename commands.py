@@ -793,7 +793,7 @@ def on_get_quote_by_date(update: Update, context: CallbackContext) -> Optional[d
     items_per_page = 1
 
     items = db.Quote.paginating_by_date(
-        page=page,
+        page=1,              # Всегда страница первая, т.к. значение items_per_page запредельное
         items_per_page=999,  # Просто очень большое число, чтобы получить все цитаты за дату
         date=date,
     )
@@ -805,33 +805,38 @@ def on_get_quote_by_date(update: Update, context: CallbackContext) -> Optional[d
             date_before_str = nearest_date_before.strftime(db.DATE_FORMAT_QUOTE)
             buttons.append(InlineKeyboardButton(
                 f'⬅️ {date_before_str}',
-                callback_data=fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, date_before_str, default_page)
+                callback_data=fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, default_page, date_before_str)
             ))
 
         if nearest_date_after:
             date_after_str = nearest_date_after.strftime(db.DATE_FORMAT_QUOTE)
             buttons.append(InlineKeyboardButton(
                 f'➡️ {date_after_str}',
-                callback_data=fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, date_after_str, default_page)
+                callback_data=fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, default_page, date_after_str)
             ))
 
-        text = f'Цитаты за **{date_str}** не существуют. Как насчет посмотреть за ближайшие даты?'
-        message.reply_markdown_v2(
+        text = f'Цитаты за <b>{date_str}</b> не существуют. Как насчет посмотреть за ближайшие даты?'
+        reply_markup = InlineKeyboardMarkup.from_row(buttons)
+
+        message.reply_html(
             text,
-            reply_markup=InlineKeyboardMarkup.from_row(buttons),
+            reply_markup=reply_markup,
             quote=True,
         )
         return
 
     quote_obj = items[page-1]
+    text = get_html_message(quote_obj)
+
+    data_pattern = fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, '{page}', date.strftime(db.DATE_FORMAT_QUOTE))
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query,
-        text=get_html_message(quote_obj),
+        text=text,
         page_count=len(items),
         items_per_page=items_per_page,
         current_page=page,
-        data_pattern=fill_string_pattern(PATTERN_GET_USERS_SHORT_BY_PAGE, '{page}'),
+        data_pattern=data_pattern,
         parse_mode=ParseMode.HTML,
         disable_web_page_preview=True,
         quote=True,
