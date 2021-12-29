@@ -13,6 +13,9 @@ PATTERN_COMICS_STATS = re.compile(f'^comics_stats$')
 
 PATTERN_GET_QUOTES = re.compile(r'^get_(\d+)_([\d,]+)$')
 
+PATTERN_GET_BY_DATE = re.compile(r'^\d{2}\.\d{2}\.\d{4}$')
+PATTERN_PAGE_GET_BY_DATE = re.compile(r'^get_page#(\d+)_by_date=(.+)$')
+
 PATTERN_HELP_COMMON = re.compile(r'^help_common_by_page_(\d+)$')
 PATTERN_HELP_ADMIN = re.compile(r'^help_admin_by_page_(\d+)$')
 

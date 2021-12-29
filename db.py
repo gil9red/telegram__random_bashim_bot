@@ -19,7 +19,7 @@ from playhouse.sqliteq import SqliteQueueDatabase
 import telegram
 
 from third_party import bash_im
-from third_party.bash_im import shorten
+from third_party.bash_im import shorten, DATE_FORMAT_QUOTE
 from config import IGNORED_LAST_QUOTES, QUOTES_LIMIT, ITEMS_PER_PAGE, DB_FILE_NAME, DB_FILE_NAME_ERROR
 
 
@@ -331,7 +331,7 @@ class Quote(BaseModel):
 
     @property
     def date_str(self) -> str:
-        return self.date.strftime('%d.%m.%Y')
+        return self.date.strftime(DATE_FORMAT_QUOTE)
 
     def has_comics(self) -> bool:
         return bool(self.get_comics())

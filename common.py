@@ -178,6 +178,8 @@ def reply_text_or_edit_with_keyboard(
     query: Optional[CallbackQuery],
     text: str,
     reply_markup: Union[InlineKeyboardMarkup, str],
+    quote: bool = False,
+    **kwargs,
 ):
     # Для запросов CallbackQuery нужно менять текущее сообщение
     if query:
@@ -188,11 +190,14 @@ def reply_text_or_edit_with_keyboard(
         message.edit_text(
             text,
             reply_markup=reply_markup,
+            **kwargs,
         )
     else:
         message.reply_text(
             text,
             reply_markup=reply_markup,
+            quote=quote,
+            **kwargs,
         )
 
 
@@ -206,6 +211,8 @@ def reply_text_or_edit_with_keyboard_paginator(
         data_pattern: str,
         before_inline_buttons: List[InlineKeyboardButton] = None,
         after_inline_buttons: List[InlineKeyboardButton] = None,
+        quote: bool = False,
+        **kwargs,
 ):
     page_count = math.ceil(page_count / items_per_page)
 
@@ -226,6 +233,8 @@ def reply_text_or_edit_with_keyboard_paginator(
         message, query,
         text,
         reply_markup,
+        quote=quote,
+        **kwargs,
     )
 
 

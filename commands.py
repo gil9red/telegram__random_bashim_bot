@@ -4,6 +4,7 @@
 __author__ = 'ipetrash'
 
 
+import datetime as DT
 import enum
 import logging
 import re
@@ -24,13 +25,14 @@ from config import (
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
     update_quote, reply_help, reply_error, reply_quote, reply_info, START_TIME, get_elapsed_time,
-    get_deep_linking, split_list, get_page, is_equal_inline_keyboards, reply_text_or_edit_with_keyboard_paginator
+    get_deep_linking, split_list, get_page, is_equal_inline_keyboards, reply_text_or_edit_with_keyboard_paginator,
+    get_html_message
 )
 from db_utils import process_request, get_user_message_repr, catch_error
 from regexp_patterns import (
     PATTERN_QUOTE_STATS, PATTERN_QUERY_QUOTE_STATS, PATTERN_COMICS_STATS, PATTERN_GET_QUOTES,
-    PATTERN_GET_USERS_SHORT_BY_PAGE, PATTERN_GET_USER_BY_PAGE,
-    PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN,
+    PATTERN_GET_USERS_SHORT_BY_PAGE, PATTERN_GET_USER_BY_PAGE, PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN,
+    PATTERN_GET_BY_DATE, PATTERN_PAGE_GET_BY_DATE,
     fill_string_pattern
 )
 from third_party import bash_im
@@ -765,6 +767,80 @@ def on_get_quote(update: Update, context: CallbackContext) -> Optional[db.Quote]
 
 
 @mega_process
+def on_get_quote_by_date(update: Update, context: CallbackContext) -> Optional[db.Quote]:
+    """
+    Получение цитаты по её дате:
+     - <день>.<месяц>.<год>, например 13.10.2006
+    """
+
+    query = update.callback_query
+    message = update.effective_message
+
+    default_page = 1
+
+    # Если функция вызвана из CallbackQueryHandler
+    if query:
+        query.answer()
+        page = int(context.match.group(1))
+        date_str = context.match.group(2)
+    else:
+        page = default_page
+        date_str = message.text
+
+    date = DT.datetime.strptime(date_str, db.DATE_FORMAT_QUOTE).date()
+
+    # Показываем по одной цитате
+    items_per_page = 1
+
+    items = db.Quote.paginating_by_date(
+        page=page,
+        items_per_page=999,  # Просто очень большое число, чтобы получить все цитаты за дату
+        date=date,
+    )
+    if not items:
+        nearest_date_before, nearest_date_after = db.Quote.get_nearest_dates(date)
+        buttons = []
+
+        if nearest_date_before:
+            date_before_str = nearest_date_before.strftime(db.DATE_FORMAT_QUOTE)
+            buttons.append(InlineKeyboardButton(
+                f'⬅️ {date_before_str}',
+                callback_data=fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, date_before_str, default_page)
+            ))
+
+        if nearest_date_after:
+            date_after_str = nearest_date_after.strftime(db.DATE_FORMAT_QUOTE)
+            buttons.append(InlineKeyboardButton(
+                f'➡️ {date_after_str}',
+                callback_data=fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, date_after_str, default_page)
+            ))
+
+        text = f'Цитаты за **{date_str}** не существуют. Как насчет посмотреть за ближайшие даты?'
+        message.reply_markdown_v2(
+            text,
+            reply_markup=InlineKeyboardMarkup.from_row(buttons),
+            quote=True,
+        )
+        return
+
+    quote_obj = items[page-1]
+
+    reply_text_or_edit_with_keyboard_paginator(
+        message, query,
+        text=get_html_message(quote_obj),
+        page_count=len(items),
+        items_per_page=items_per_page,
+        current_page=page,
+        data_pattern=fill_string_pattern(PATTERN_GET_USERS_SHORT_BY_PAGE, '{page}'),
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True,
+        quote=True,
+    )
+
+    return quote_obj
+
+
+@mega_process
 def on_get_external_quote(update: Update, context: CallbackContext):
     """
     Получение цитаты из сайта:
@@ -1053,6 +1129,14 @@ def setup(updater: Updater):
             on_get_quote
         )
     )
+
+    dp.add_handler(
+        MessageHandler(
+            Filters.regex(PATTERN_GET_BY_DATE),
+            on_get_quote_by_date
+        )
+    )
+    dp.add_handler(CallbackQueryHandler(on_get_quote_by_date, pattern=PATTERN_PAGE_GET_BY_DATE))
 
     dp.add_handler(CommandHandler('get_external_quote', on_get_external_quote))
     dp.add_handler(
