@@ -21,6 +21,7 @@ import schedule
 from config import BACKUP_DIR_NAME, DB_DIR_NAME, DIR_COMICS, ERROR_TEXT
 from common import reply_error
 from db import User, Chat, Quote, Request, Error
+from third_party.notifications import send_telegram_notification_error
 
 
 def process_request(log: logging.Logger):
@@ -133,27 +134,39 @@ def db_create_backup(
     backup_path_db = backup_path / DB_DIR_NAME.name
     backup_path_db.mkdir(parents=True, exist_ok=True)
 
-    zip_name = DT.datetime.today().strftime(date_fmt)
-    zip_name = backup_path_db / zip_name
-
-    log.info(f'Doing create backup DB in: {zip_name}')
-    shutil.make_archive(zip_name, 'zip', DB_DIR_NAME)
-
     backup_path_comics = backup_path / DIR_COMICS.name
     backup_path_comics.mkdir(parents=True, exist_ok=True)
 
-    log.info(f'Doing create backup comics in: {backup_path_comics}')
+    zip_name = DT.datetime.today().strftime(date_fmt)
+    zip_name = backup_path_db / zip_name
 
-    for f in DIR_COMICS.glob('*'):
-        if not f.is_file():
-            continue
+    attempts = 5
+    for i in range(attempts):
+        try:
+            log.info(f'Создание бэкапа базы данных в: {zip_name}')
+            shutil.make_archive(zip_name, 'zip', DB_DIR_NAME)
 
-        backup_comics_file = backup_path_comics / f.name
-        if backup_comics_file.exists():
-            continue
+            log.info(f'Создание бэкапа комиксов в: {backup_path_comics}')
+            for f in DIR_COMICS.glob('*'):
+                if not f.is_file():
+                    continue
 
-        log.info(f'Saving {backup_comics_file.name}')
-        shutil.copyfile(f, backup_comics_file)
+                backup_comics_file = backup_path_comics / f.name
+                if backup_comics_file.exists():
+                    continue
+
+                log.info(f'Сохранение {backup_comics_file.name}')
+                shutil.copyfile(f, backup_comics_file)
+
+            # Всё хорошо завершилось, выходим из функции
+            return
+
+        except Exception:
+            log.exception(f"Ошибка (попытка {i+1}):")
+            time.sleep(30)
+
+    # Если дошли сюда, значит не получилось сохранить бэкап
+    send_telegram_notification_error(log.name, "Ошибка при создании бэкапа")
 
 
 def do_backup(log: logging.Logger):
