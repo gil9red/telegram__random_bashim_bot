@@ -15,7 +15,7 @@ import commands
 import common
 import db
 from config import TOKEN, DIR_COMICS
-from common import log
+from common import log, log_backup
 from db_utils import do_backup
 from parsers import download_random_quotes, download_main_page_quotes, download_seq_page_quotes, run_parser_health_check
 
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     Thread(target=download_main_page_quotes, args=[log, DIR_COMICS]).start()
     Thread(target=download_seq_page_quotes, args=[log, DIR_COMICS]).start()
     Thread(target=download_random_quotes, args=[log, DIR_COMICS]).start()
-    Thread(target=do_backup, args=[log]).start()
+    Thread(target=do_backup, args=[log_backup]).start()
     Thread(target=run_parser_health_check, args=[log]).start()
 
     while True:

@@ -442,3 +442,8 @@ log = get_logger(
     DIR.name,
     DIR_LOG / f'{Path(__file__).resolve().parent.name}.log'
 )
+
+log_backup = get_logger(
+    f'{DIR.name}_backup',
+    DIR_LOG / 'backup.log'
+)

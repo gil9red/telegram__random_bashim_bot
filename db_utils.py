@@ -7,8 +7,8 @@ __author__ = 'ipetrash'
 import datetime as DT
 import functools
 import logging
-import time
 import shutil
+import time
 from pathlib import Path
 
 # pip install python-telegram-bot
@@ -18,7 +18,7 @@ from telegram.ext import CallbackContext
 # pip install schedule
 import schedule
 
-from config import ERROR_TEXT, DB_DIR_NAME, BACKUP_DIR_NAME
+from config import BACKUP_DIR_NAME, DB_DIR_NAME, DIR_COMICS, ERROR_TEXT
 from common import reply_error
 from db import User, Chat, Quote, Request, Error
 
@@ -123,20 +123,37 @@ def get_user_message_repr(user: User) -> str:
     '''.rstrip()
 
 
-def db_create_backup(log: logging.Logger, backup_dir=BACKUP_DIR_NAME, date_fmt='%Y-%m-%d'):
+def db_create_backup(
+        log: logging.Logger,
+        backup_dir=BACKUP_DIR_NAME,
+        date_fmt='%Y-%m-%d'
+):
     backup_path = Path(backup_dir)
-    backup_path.mkdir(parents=True, exist_ok=True)
+
+    backup_path_db = backup_path / DB_DIR_NAME.name
+    backup_path_db.mkdir(parents=True, exist_ok=True)
 
     zip_name = DT.datetime.today().strftime(date_fmt)
-    zip_name = backup_path / zip_name
+    zip_name = backup_path_db / zip_name
 
-    log.debug(f'Doing create backup in: {zip_name}')
+    log.info(f'Doing create backup DB in: {zip_name}')
+    shutil.make_archive(zip_name, 'zip', DB_DIR_NAME)
 
-    shutil.make_archive(
-        zip_name,
-        'zip',
-        DB_DIR_NAME
-    )
+    backup_path_comics = backup_path / DIR_COMICS.name
+    backup_path_comics.mkdir(parents=True, exist_ok=True)
+
+    log.info(f'Doing create backup comics in: {backup_path_comics}')
+
+    for f in DIR_COMICS.glob('*'):
+        if not f.is_file():
+            continue
+
+        backup_comics_file = backup_path_comics / f.name
+        if backup_comics_file.exists():
+            continue
+
+        log.info(f'Saving {backup_comics_file.name}')
+        shutil.copyfile(f, backup_comics_file)
 
 
 def do_backup(log: logging.Logger):

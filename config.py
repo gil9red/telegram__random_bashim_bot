@@ -36,7 +36,8 @@ DB_DIR_NAME.mkdir(parents=True, exist_ok=True)
 
 DB_FILE_NAME = str(DB_DIR_NAME / 'database.sqlite')
 
-BACKUP_DIR_NAME = DIR / 'backup'
+BACKUP_ROOT = Path('D:/')
+BACKUP_DIR_NAME = BACKUP_ROOT / 'backup' / DIR.name
 
 DB_DIR_NAME_ERROR = DIR / 'database_error'
 DB_DIR_NAME_ERROR.mkdir(parents=True, exist_ok=True)
