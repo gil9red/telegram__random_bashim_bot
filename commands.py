@@ -459,8 +459,9 @@ def on_request(update: Update, context: CallbackContext) -> Optional[db.Quote]:
 def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
     r"""
     Получение порядка вызова указанной цитаты у текущего пользователя:
-     - /get_used_quote (\d+)
-     - get[ _]used[ _]quote (\d+) или (\d+)
+     - /get_used_quote <номер цитаты>
+     - get used quote <номер цитаты>
+     - <номер цитаты>
     """
 
     quote_id = get_quote_id(context)
@@ -477,7 +478,8 @@ def on_get_used_last_quote_in_requests(update: Update, context: CallbackContext)
     r"""
     Получение порядка вызова у последней цитаты текущего пользователя:
      - /get_used_last_quote
-     - get[ _]used[ _]last[ _]quote или ?
+     - get used last quote
+     - ?
     """
 
     user_id = update.effective_user.id
@@ -491,7 +493,8 @@ def on_get_user_stats(update: Update, context: CallbackContext):
     """
     Получение статистики текущего пользователя:
      - /stats
-     - stats или статистика
+     - stats
+     - статистика
     """
 
     user = db.User.get_from(update.effective_user)
@@ -604,7 +607,8 @@ def on_get_quote_stats(update: Update, context: CallbackContext):
     """
     Получение статистики по цитатам:
      - /quote_stats
-     - quote[ _]stats или статистика[ _]цитат
+     - quote stats
+     - статистика цитат
     """
 
     message = update.effective_message
@@ -886,8 +890,8 @@ def on_update_quote(update: Update, context: CallbackContext):
 def on_find_my(update: Update, context: CallbackContext):
     r"""
     Поиск цитат среди уже полученных:
-     - /find_my (.+)
-     - find[_ ]my (.+)
+     - /find_my <текст в регулярном выражении>
+     - find my <текст в регулярном выражении>
     """
 
     user = db.User.get_from(update.effective_user)
@@ -901,8 +905,8 @@ def on_find_my(update: Update, context: CallbackContext):
 def on_find(update: Update, context: CallbackContext):
     r"""
     Поиск цитат в базе:
-     - /find (.+)
-     - find (.+)
+     - /find <текст в регулярном выражении>
+     - find <текст в регулярном выражении>
     """
 
     value = get_context_value(context)
@@ -914,8 +918,8 @@ def on_find(update: Update, context: CallbackContext):
 def on_find_new(update: Update, context: CallbackContext):
     r"""
     Поиск цитат в базе, что еще не были получены:
-     - /find_new (.+)
-     - find[_ ]new (.+)
+     - /find_new <текст в регулярном выражении>
+     - find new <текст в регулярном выражении>
     """
 
     user = db.User.get_from(update.effective_user)
@@ -1061,28 +1065,28 @@ def setup(updater: Updater):
     )
 
     # Возвращение количества оставшихся уникальных цитат
-    dp.add_handler(CommandHandler('get_number_of_unique_quotes', on_get_number_of_unique_quotes, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('get_number_of_unique_quotes', on_get_number_of_unique_quotes))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'^\?\?$'),
+            Filters.regex(r'^\?\?$'),
             on_get_number_of_unique_quotes
         )
     )
 
     # Возвращение детального описания количества оставшихся уникальных цитат
-    dp.add_handler(CommandHandler('get_detail_of_unique_quotes', on_get_detail_of_unique_quotes, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('get_detail_of_unique_quotes', on_get_detail_of_unique_quotes))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'^\?\?\?$'),
+            Filters.regex(r'^\?\?\?$'),
             on_get_detail_of_unique_quotes
         )
     )
 
     # Возвращение статистики цитат
-    dp.add_handler(CommandHandler('quote_stats', on_get_quote_stats, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('quote_stats', on_get_quote_stats))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(PATTERN_QUOTE_STATS),
+            Filters.regex(PATTERN_QUOTE_STATS),
             on_get_quote_stats
         )
     )
@@ -1090,21 +1094,21 @@ def setup(updater: Updater):
     dp.add_handler(CallbackQueryHandler(on_get_comics_stats, pattern=PATTERN_COMICS_STATS))
 
     # Возвращение порядка вызова указанной цитаты у текущего пользователя, сортировка от конца
-    dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]used[ _]quote (\d+)$') | Filters.regex(r'^(\d+)$')),
+            Filters.regex(r'(?i)^get[ _]used[ _]quote (\d+)$') | Filters.regex(r'^(\d+)$'),
             on_get_used_quote_in_requests
         )
     )
 
     # Возвращение порядка вызова у последней полученный цитаты у текущего пользователя, сортировка от конца
     dp.add_handler(
-        CommandHandler('get_used_last_quote', on_get_used_last_quote_in_requests, FILTER_BY_ADMIN)
+        CommandHandler('get_used_last_quote', on_get_used_last_quote_in_requests)
     )
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote$|^\?$'),
+            Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote$|^\?$'),
             on_get_used_last_quote_in_requests
         )
     )
@@ -1159,26 +1163,26 @@ def setup(updater: Updater):
         )
     )
 
-    dp.add_handler(CommandHandler('find_my', on_find_my, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('find_my', on_find_my))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^find[ _]my (.+)$'),
+            Filters.regex(r'(?i)^find[ _]my (.+)$'),
             on_find_my
         )
     )
 
-    dp.add_handler(CommandHandler('find_new', on_find_new, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('find_new', on_find_new))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^find[ _]new (.+)$'),
+            Filters.regex(r'(?i)^find[ _]new (.+)$'),
             on_find_new
         )
     )
 
-    dp.add_handler(CommandHandler('find', on_find, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('find', on_find))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^find (.+)$'),
+            Filters.regex(r'(?i)^find (.+)$'),
             on_find
         )
     )
