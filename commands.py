@@ -299,7 +299,8 @@ def on_settings(update: Update, context: CallbackContext):
 
     reply_markup = InlineKeyboardMarkup.from_column([
         InlineKeyboardButton(SettingState.YEAR.value, callback_data=SettingState.YEAR.get_callback_data()),
-        InlineKeyboardButton(SettingState.LIMIT.value, callback_data=SettingState.LIMIT.get_callback_data()),
+        # TODO: Удалить, т.к. ограничения нет смысла использовать
+        # InlineKeyboardButton(SettingState.LIMIT.value, callback_data=SettingState.LIMIT.get_callback_data()),
     ])
 
     text = 'Выбор настроек:'
