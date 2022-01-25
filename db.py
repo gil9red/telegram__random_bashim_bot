@@ -126,6 +126,7 @@ class BaseModel(Model):
 class Settings(BaseModel):
     years_of_quotes = TextField(default='')
     limit_unique_quotes = IntegerField(null=True)  # TODO: Удалить, т.к. ограничения нет смысла использовать
+    filter_quote_by_max_length_text = IntegerField(null=True)
 
     def get_years_of_quotes(self) -> List[int]:
         if not self.years_of_quotes:
@@ -148,6 +149,13 @@ class Settings(BaseModel):
     # TODO: Удалить, т.к. ограничения нет смысла использовать
     def set_limit_unique_quotes(self, limit: int):
         self.limit_unique_quotes = limit
+        self.save()
+
+    def get_filter_quote_by_max_length_text(self) -> Optional[int]:
+        return self.filter_quote_by_max_length_text
+
+    def set_filter_quote_by_max_length_text(self, limit: Optional[int]):
+        self.filter_quote_by_max_length_text = limit
         self.save()
 
 
@@ -194,7 +202,12 @@ class User(BaseModel):
             where=Quote.id.in_(query)
         ).count()
 
-    def get_user_unique_random(self, years: List[int] = None, limit=QUOTES_LIMIT) -> List['Quote']:
+    def get_user_unique_random(
+            self,
+            years: List[int] = None,
+            limit=QUOTES_LIMIT,
+            filter_quote_by_max_length_text: int = None,
+    ) -> List['Quote']:
         return Quote.get_user_unique_random(
             self,
             years,
@@ -202,6 +215,7 @@ class User(BaseModel):
             # TODO: Удалить, т.к. ограничения нет смысла использовать
             # self.get_limit_unique_quotes(),
             ignored_last_quotes=-1,
+            filter_quote_by_max_length_text=filter_quote_by_max_length_text,
         )
 
     def get_years_of_quotes(self) -> Dict[int, bool]:
@@ -239,6 +253,17 @@ class User(BaseModel):
             self.save(only=[User.settings])
 
         self.settings.set_limit_unique_quotes(limit)
+
+    def get_filter_quote_by_max_length_text(self) -> Optional[int]:
+        if self.settings:
+            return self.settings.get_filter_quote_by_max_length_text()
+
+    def set_filter_quote_by_max_length_text(self, limit: int):
+        if not self.settings:
+            self.settings = Settings.create()
+            self.save(only=[User.settings])
+
+        self.settings.set_filter_quote_by_max_length_text(limit)
 
     # TODO: rename method
     def find(self, regex: str, case_insensitive=True) -> List[int]:
@@ -383,7 +408,8 @@ class Quote(BaseModel):
             years: List[int] = None,
             limit=QUOTES_LIMIT,
             # TODO: Удалить, т.к. ограничения нет смысла использовать
-            ignored_last_quotes=IGNORED_LAST_QUOTES
+            ignored_last_quotes=IGNORED_LAST_QUOTES,
+            filter_quote_by_max_length_text: int = None,
     ) -> List['Quote']:
         # Last {ignored_last_quotes} returned quote's
         sub_query = Request.get_all_quote_id_by_user(user_id, ignored_last_quotes).distinct()
@@ -392,6 +418,9 @@ class Quote(BaseModel):
         if years:
             fn_year = fn.strftime('%Y', cls.date).cast('INTEGER')
             where = where & fn_year.in_(years)
+
+        if filter_quote_by_max_length_text:
+            where = where & (fn.LENGTH(cls.text) <= filter_quote_by_max_length_text)
 
         query = (
             cls.select()

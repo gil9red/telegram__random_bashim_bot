@@ -20,7 +20,7 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, Callb
 import db
 from config import (
     ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY, LIMIT_UNIQUE_QUOTES,
-    MAX_MESSAGE_LENGTH, ITEMS_PER_PAGE
+    MAX_MESSAGE_LENGTH, ITEMS_PER_PAGE, LENGTH_TEXT_OF_SMALL_QUOTE
 )
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
@@ -55,9 +55,16 @@ def mega_process(func) -> Callable:
 
 
 class SettingState(enum.Enum):
-    YEAR = " ⁃ Фильтрация получения цитат по годам"
-    LIMIT = " ⁃ Количество получаемых уникальных цитат"  # TODO: Удалить, т.к. ограничения нет смысла использовать
-    MAIN = enum.auto()
+    YEAR = (" ⁃ Фильтрация получения цитат по годам", "Выбор года:", True)
+    # TODO: Удалить, т.к. ограничения нет смысла использовать
+    LIMIT = (" ⁃ Количество получаемых уникальных цитат", "Количество получаемых уникальных цитат:", False)
+    FILTER = (" ⁃ Фильтрация цитат по размеру", "Фильтрация цитат по размеру:", True)
+    MAIN = ("", "", False)
+
+    def __init__(self, title: str, description: str, is_visible: bool):
+        self.title = title
+        self.description = description
+        self.is_visible = is_visible
 
     def get_callback_data(self) -> str:
         return str(self).replace('.', '_')
@@ -90,7 +97,8 @@ def get_random_quote(update: Update, context: CallbackContext) -> Optional[db.Qu
         log.debug('Quotes is empty, filling from database.')
 
         years_of_quotes = user.get_years_of_quotes()
-        update_cache(user, years_of_quotes, log, update, context)
+        filter_quote_by_max_length_text = user.get_filter_quote_by_max_length_text()
+        update_cache(user, years_of_quotes, filter_quote_by_max_length_text, log, update, context)
 
     if quotes:
         return quotes.pop()
@@ -261,6 +269,7 @@ def on_help(update: Update, context: CallbackContext):
 def update_cache(
         user: db.User,
         years_of_quotes: Dict[int, bool],
+        filter_quote_by_max_length_text: Optional[int],
         log: logging.Logger,
         update: Update,
         context: CallbackContext
@@ -272,11 +281,15 @@ def update_cache(
         context.user_data['quotes'] = []
 
     quotes = context.user_data['quotes']
+    quotes.clear()
 
     if years:
         log.debug(f'Quotes from year(s): {", ".join(map(str, years))}.')
 
-    quotes += user.get_user_unique_random(years)
+    quotes += user.get_user_unique_random(
+        years=years,
+        filter_quote_by_max_length_text=filter_quote_by_max_length_text
+    )
 
     log.debug(f'Finish [{update_cache.__name__}]. Quotes: {len(quotes)}')
 
@@ -298,9 +311,8 @@ def on_settings(update: Update, context: CallbackContext):
     message = update.effective_message
 
     reply_markup = InlineKeyboardMarkup.from_column([
-        InlineKeyboardButton(SettingState.YEAR.value, callback_data=SettingState.YEAR.get_callback_data()),
-        # TODO: Удалить, т.к. ограничения нет смысла использовать
-        # InlineKeyboardButton(SettingState.LIMIT.value, callback_data=SettingState.LIMIT.get_callback_data()),
+        InlineKeyboardButton(settings_state.title, callback_data=settings_state.get_callback_data())
+        for settings_state in SettingState if settings_state.is_visible
     ])
 
     text = 'Выбор настроек:'
@@ -331,16 +343,8 @@ def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext
         years_of_quotes[year] = not years_of_quotes[year]
         log.debug(f'    {year} = {years_of_quotes[year]}')
 
-        # Нужно обновить кэш цитат в соответствии с выбранными годами
-        log.debug('Clear cache quotes')
-
-        if 'quotes' not in context.user_data:
-            context.user_data['quotes'] = []
-
-        quotes = context.user_data['quotes']
-        quotes.clear()
-
-        update_cache(user, years_of_quotes, log, update, context)
+        filter_quote_by_max_length_text = user.get_filter_quote_by_max_length_text()
+        update_cache(user, years_of_quotes, filter_quote_by_max_length_text, log, update, context)
 
     # Генерация матрицы кнопок
     items = [
@@ -362,7 +366,7 @@ def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext
     # Обновление базы данных должно быть в соответствии с тем, что видит пользователь
     user.set_years_of_quotes(years_of_quotes)
 
-    text = 'Выбор года:'
+    text = settings.description
     query.edit_message_text(text, reply_markup=reply_markup)
 
 
@@ -405,7 +409,52 @@ def _on_reply_limit(log: logging.Logger, update: Update, context: CallbackContex
     if is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
         return
 
-    text = 'Количество уникальных цитат:'
+    text = settings.description
+    query.edit_message_text(text, reply_markup=reply_markup)
+
+
+def _on_reply_filter(log: logging.Logger, update: Update, context: CallbackContext):
+    query = update.callback_query
+
+    settings = SettingState.FILTER
+    user = db.User.get_from(update.effective_user)
+
+    # Если значение было передано
+    pattern = settings.get_pattern_with_params()
+    m = pattern.search(query.data)
+    if m:
+        limit = int(m.group(1))
+        if not limit:
+            limit = None
+
+        log.debug(f'    filter_quote_by_max_length_text = {limit}')
+        user.set_filter_quote_by_max_length_text(limit)
+
+        # После изменения фильтра нужно перегенерировать кэш
+        years_of_quotes = user.get_years_of_quotes()
+        update_cache(user, years_of_quotes, limit, log, update, context)
+    else:
+        limit = user.get_filter_quote_by_max_length_text()
+
+    reply_markup = InlineKeyboardMarkup.from_column([
+        # Пусть без ограничений будет 0, чтобы не переделывать логику с числами выше
+        InlineKeyboardButton(
+            (RADIOBUTTON if not limit else RADIOBUTTON_EMPTY) + ' Без ограничений',
+            callback_data=fill_string_pattern(pattern, 0)
+        ),
+        # Возможны будут другие варианты, но пока наличие значения - наличие флага
+        InlineKeyboardButton(
+            (RADIOBUTTON if limit else RADIOBUTTON_EMPTY) + ' Только маленькие',
+            callback_data=fill_string_pattern(pattern, LENGTH_TEXT_OF_SMALL_QUOTE)
+        ),
+        INLINE_KEYBOARD_BUTTON_BACK,
+    ])
+
+    # Fix error: "telegram.error.BadRequest: Message is not modified"
+    if is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
+        return
+
+    text = settings.description
     query.edit_message_text(text, reply_markup=reply_markup)
 
 
@@ -414,6 +463,7 @@ def on_settings_year(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
 
+    # TODO: перенести реализацию _on_reply_year в on_settings_year?
     _on_reply_year(log, update, context)
 
 
@@ -423,7 +473,17 @@ def on_settings_limit(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
 
+    # TODO: перенести реализацию _on_reply_limit в on_settings_limit?
     _on_reply_limit(log, update, context)
+
+
+@mega_process
+def on_settings_filter(update: Update, context: CallbackContext):
+    query = update.callback_query
+    query.answer()
+
+    # TODO: перенести реализацию _on_reply_filter в on_settings_filter?
+    _on_reply_filter(log, update, context)
 
 
 @mega_process
@@ -433,8 +493,8 @@ def on_request(update: Update, context: CallbackContext) -> Optional[db.Quote]:
         text = 'Закончились уникальные цитаты'
 
         user = db.User.get_from(update.effective_user)
-        if any(user.get_years_of_quotes().values()):
-            text += '. Попробуйте в настройках убрать фильтрацию цитат по годам.\n/settings'
+        if any(user.get_years_of_quotes().values()) or user.get_filter_quote_by_max_length_text() > 0:
+            text += '. Попробуйте в настройках убрать фильтрацию цитат по году или размеру.\n/settings'
 
         reply_info(text, update, context)
         return
@@ -1045,6 +1105,9 @@ def setup(updater: Updater):
     # TODO: Удалить, т.к. ограничения нет смысла использовать
     dp.add_handler(
         CallbackQueryHandler(on_settings_limit, pattern=SettingState.LIMIT.get_pattern_full())
+    )
+    dp.add_handler(
+        CallbackQueryHandler(on_settings_filter, pattern=SettingState.FILTER.get_pattern_full())
     )
 
     # Возвращение статистики текущего пользователя
