@@ -11,6 +11,7 @@ import time
 from common import update_quote
 from db import Quote, fn
 
+
 i = 0
 for quote in Quote.select().where(
     Quote.modification_date <= DT.date(2020, 9, 6)
