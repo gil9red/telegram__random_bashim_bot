@@ -321,12 +321,14 @@ def update_quote(
         need_reply and reply_info(text, update, context)
 
     else:
-        # TODO: Поддержать проверку и добавление новых комиксов
         modified_list = []
 
         if quote_db.text != quote_bashim.text:
             quote_db.text = quote_bashim.text
             modified_list.append('текст')
+
+        # Пробуем скачать комиксы
+        quote_bashim.download_comics(DIR_COMICS)
 
         if modified_list:
             quote_db.modification_date = DT.date.today()
