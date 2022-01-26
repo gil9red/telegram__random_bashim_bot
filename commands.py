@@ -19,7 +19,7 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, Callb
 
 import db
 from config import (
-    ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY, LIMIT_UNIQUE_QUOTES,
+    ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY,
     MAX_MESSAGE_LENGTH, ITEMS_PER_PAGE, LENGTH_TEXT_OF_SMALL_QUOTE
 )
 from common import (
@@ -56,8 +56,6 @@ def mega_process(func) -> Callable:
 
 class SettingState(enum.Enum):
     YEAR = (" ⁃ Фильтрация получения цитат по годам", "Выбор года:", True)
-    # TODO: Удалить, т.к. ограничения нет смысла использовать
-    LIMIT = (" ⁃ Количество получаемых уникальных цитат", "Количество получаемых уникальных цитат:", False)
     FILTER = (" ⁃ Фильтрация цитат по размеру", "Фильтрация цитат по размеру:", True)
     MAIN = ("", "", False)
 
@@ -325,8 +323,10 @@ def on_settings(update: Update, context: CallbackContext):
 
 
 # TODO: Перенести реализацию checkbox/radio в SimplePyScripts
-def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext):
+@mega_process
+def on_settings_year(update: Update, context: CallbackContext):
     query = update.callback_query
+    query.answer()
 
     settings = SettingState.YEAR
 
@@ -371,50 +371,10 @@ def _on_reply_year(log: logging.Logger, update: Update, context: CallbackContext
 
 
 # TODO: Перенести реализацию checkbox/radio в SimplePyScripts
-# TODO: Удалить, т.к. ограничения нет смысла использовать
-def _on_reply_limit(log: logging.Logger, update: Update, context: CallbackContext):
+@mega_process
+def on_settings_filter(update: Update, context: CallbackContext):
     query = update.callback_query
-
-    settings = SettingState.LIMIT
-    user = db.User.get_from(update.effective_user)
-
-    # Если значение было передано
-    pattern = settings.get_pattern_with_params()
-    m = pattern.search(query.data)
-    if m:
-        data_limit = int(m.group(1))
-        if data_limit not in LIMIT_UNIQUE_QUOTES:
-            return
-
-        log.debug(f'    limit_unique_quotes = {data_limit}')
-
-        user.set_limit_unique_quotes(data_limit)
-
-    limit = user.get_limit_unique_quotes()
-
-    # Генерация матрицы кнопок
-    items = [
-        InlineKeyboardButton(
-            (RADIOBUTTON if x == limit else RADIOBUTTON_EMPTY) + f' {x}',
-            callback_data=fill_string_pattern(pattern, x)
-        )
-        for x in LIMIT_UNIQUE_QUOTES
-    ]
-    buttons = split_list(items, columns=3)
-    buttons.append([INLINE_KEYBOARD_BUTTON_BACK])
-
-    reply_markup = InlineKeyboardMarkup(buttons)
-
-    # Fix error: "telegram.error.BadRequest: Message is not modified"
-    if is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
-        return
-
-    text = settings.description
-    query.edit_message_text(text, reply_markup=reply_markup)
-
-
-def _on_reply_filter(log: logging.Logger, update: Update, context: CallbackContext):
-    query = update.callback_query
+    query.answer()
 
     settings = SettingState.FILTER
     user = db.User.get_from(update.effective_user)
@@ -456,34 +416,6 @@ def _on_reply_filter(log: logging.Logger, update: Update, context: CallbackConte
 
     text = settings.description
     query.edit_message_text(text, reply_markup=reply_markup)
-
-
-@mega_process
-def on_settings_year(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-
-    # TODO: перенести реализацию _on_reply_year в on_settings_year?
-    _on_reply_year(log, update, context)
-
-
-# TODO: Удалить, т.к. ограничения нет смысла использовать
-@mega_process
-def on_settings_limit(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-
-    # TODO: перенести реализацию _on_reply_limit в on_settings_limit?
-    _on_reply_limit(log, update, context)
-
-
-@mega_process
-def on_settings_filter(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-
-    # TODO: перенести реализацию _on_reply_filter в on_settings_filter?
-    _on_reply_filter(log, update, context)
 
 
 @mega_process
@@ -1101,10 +1033,6 @@ def setup(updater: Updater):
     )
     dp.add_handler(
         CallbackQueryHandler(on_settings_year, pattern=SettingState.YEAR.get_pattern_full())
-    )
-    # TODO: Удалить, т.к. ограничения нет смысла использовать
-    dp.add_handler(
-        CallbackQueryHandler(on_settings_limit, pattern=SettingState.LIMIT.get_pattern_full())
     )
     dp.add_handler(
         CallbackQueryHandler(on_settings_filter, pattern=SettingState.FILTER.get_pattern_full())

@@ -20,7 +20,7 @@ import telegram
 
 from third_party import bash_im
 from third_party.bash_im import shorten, DATE_FORMAT_QUOTE
-from config import IGNORED_LAST_QUOTES, QUOTES_LIMIT, ITEMS_PER_PAGE, DB_FILE_NAME, DB_FILE_NAME_ERROR
+from config import QUOTES_LIMIT, ITEMS_PER_PAGE, DB_FILE_NAME, DB_FILE_NAME_ERROR
 
 
 def get_clear_name(full_name: str) -> str:
@@ -125,7 +125,6 @@ class BaseModel(Model):
 
 class Settings(BaseModel):
     years_of_quotes = TextField(default='')
-    limit_unique_quotes = IntegerField(null=True)  # TODO: Удалить, т.к. ограничения нет смысла использовать
     filter_quote_by_max_length_text = IntegerField(null=True)
 
     def get_years_of_quotes(self) -> List[int]:
@@ -140,15 +139,6 @@ class Settings(BaseModel):
             return
 
         self.years_of_quotes = text
-        self.save()
-
-    # TODO: Удалить, т.к. ограничения нет смысла использовать
-    def get_limit_unique_quotes(self) -> int:
-        return self.limit_unique_quotes or IGNORED_LAST_QUOTES
-
-    # TODO: Удалить, т.к. ограничения нет смысла использовать
-    def set_limit_unique_quotes(self, limit: int):
-        self.limit_unique_quotes = limit
         self.save()
 
     def get_filter_quote_by_max_length_text(self) -> Optional[int]:
@@ -210,11 +200,8 @@ class User(BaseModel):
     ) -> List['Quote']:
         return Quote.get_user_unique_random(
             self,
-            years,
-            limit,
-            # TODO: Удалить, т.к. ограничения нет смысла использовать
-            # self.get_limit_unique_quotes(),
-            ignored_last_quotes=-1,
+            years=years,
+            limit=limit,
             filter_quote_by_max_length_text=filter_quote_by_max_length_text,
         )
 
@@ -238,21 +225,6 @@ class User(BaseModel):
             self.save(only=[User.settings])
 
         self.settings.set_years_of_quotes(years)
-
-    # TODO: Удалить, т.к. ограничения нет смысла использовать
-    def get_limit_unique_quotes(self) -> int:
-        if not self.settings:
-            return IGNORED_LAST_QUOTES
-
-        return self.settings.get_limit_unique_quotes()
-
-    # TODO: Удалить, т.к. ограничения нет смысла использовать
-    def set_limit_unique_quotes(self, limit: int):
-        if not self.settings:
-            self.settings = Settings.create()
-            self.save(only=[User.settings])
-
-        self.settings.set_limit_unique_quotes(limit)
 
     def get_filter_quote_by_max_length_text(self) -> Optional[int]:
         if self.settings:
@@ -407,12 +379,9 @@ class Quote(BaseModel):
             user_id: Union[int, User],
             years: List[int] = None,
             limit=QUOTES_LIMIT,
-            # TODO: Удалить, т.к. ограничения нет смысла использовать
-            ignored_last_quotes=IGNORED_LAST_QUOTES,
             filter_quote_by_max_length_text: int = None,
     ) -> List['Quote']:
-        # Last {ignored_last_quotes} returned quote's
-        sub_query = Request.get_all_quote_id_by_user(user_id, ignored_last_quotes).distinct()
+        sub_query = Request.get_all_quote_id_by_user(user_id).distinct()
 
         where = cls.id.not_in(sub_query)
         if years:
@@ -561,7 +530,6 @@ class Request(BaseModel):
     def get_all_quote_id_by_user(
             cls,
             user_id: Union[int, User],
-            ignored_last_quotes=-1,
             fields: List[Field] = None
     ) -> ModelSelect:
         if not fields:
@@ -575,9 +543,6 @@ class Request(BaseModel):
             )
             .order_by(cls.id.desc())
         )
-        if ignored_last_quotes > 0:
-            query = query.limit(ignored_last_quotes)
-
         return query
 
     @classmethod
