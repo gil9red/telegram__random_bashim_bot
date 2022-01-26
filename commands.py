@@ -890,7 +890,7 @@ def on_find_my(update: Update, context: CallbackContext):
     user = db.User.get_from(update.effective_user)
 
     value = get_context_value(context)
-    items = user.find(value)
+    items = user.find_quote_ids(value)
     reply_quote_ids(items, update, context)
 
 
@@ -919,7 +919,7 @@ def on_find_new(update: Update, context: CallbackContext):
     value = get_context_value(context)
 
     items_all = db.Quote.find(value)
-    items_user = user.find(value)
+    items_user = user.find_quote_ids(value)
     items = [x for x in items_all if x not in items_user]
 
     reply_quote_ids(items, update, context)

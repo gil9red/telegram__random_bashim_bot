@@ -237,8 +237,7 @@ class User(BaseModel):
 
         self.settings.set_filter_quote_by_max_length_text(limit)
 
-    # TODO: rename method
-    def find(self, regex: str, case_insensitive=True) -> List[int]:
+    def find_quote_ids(self, regex: str, case_insensitive=True) -> List[int]:
         user_quotes = Quote.id.in_(
             Request.get_all_quote_id_by_user(self).distinct()
         )
@@ -622,8 +621,8 @@ if __name__ == '__main__':
     # 2006-01-05 2006-01-11
     print()
 
-    assert admin.find('Arux') == admin.find('ARUX')
-    assert admin.find('Arux') == admin.find('Arux', case_insensitive=False)
+    assert admin.find_quote_ids('Arux') == admin.find_quote_ids('ARUX')
+    assert admin.find_quote_ids('Arux') == admin.find_quote_ids('Arux', case_insensitive=False)
 
     assert Quote.find('Arux') == Quote.find('ARUX')
     assert Quote.find('Arux') == Quote.find('Arux', case_insensitive=False)
