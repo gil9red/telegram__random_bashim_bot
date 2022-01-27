@@ -9,7 +9,7 @@ from random import randint
 import time
 
 from common import update_quote
-from db import Quote, fn
+from bot.db import Quote, fn
 
 
 i = 0

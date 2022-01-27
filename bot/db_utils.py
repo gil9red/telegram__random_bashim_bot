@@ -20,7 +20,7 @@ import schedule
 
 from config import BACKUP_DIR_NAME, DB_DIR_NAME, DIR_COMICS, ERROR_TEXT
 from common import reply_error
-from db import User, Chat, Quote, Request, Error
+from bot.db import User, Chat, Quote, Request, Error
 from third_party.notifications import send_telegram_notification_error
 
 

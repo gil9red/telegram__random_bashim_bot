@@ -17,7 +17,7 @@ from telegram import (
 )
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
 
-import db
+import bot.db as db
 from config import (
     ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY,
     MAX_MESSAGE_LENGTH, ITEMS_PER_PAGE, LENGTH_TEXT_OF_SMALL_QUOTE
@@ -28,8 +28,8 @@ from common import (
     get_deep_linking, split_list, get_page, is_equal_inline_keyboards, reply_text_or_edit_with_keyboard_paginator,
     get_html_message
 )
-from db_utils import process_request, get_user_message_repr, catch_error
-from regexp_patterns import (
+from bot.db_utils import process_request, get_user_message_repr, catch_error
+from bot.regexp_patterns import (
     PATTERN_QUOTE_STATS, PATTERN_QUERY_QUOTE_STATS, PATTERN_COMICS_STATS, PATTERN_GET_QUOTES,
     PATTERN_GET_USERS_SHORT_BY_PAGE, PATTERN_GET_USER_BY_PAGE, PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN,
     PATTERN_GET_BY_DATE, PATTERN_PAGE_GET_BY_DATE,

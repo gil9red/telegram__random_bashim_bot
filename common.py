@@ -27,11 +27,11 @@ from telegram.ext.filters import MergedFilter
 # pip install python-telegram-bot-pagination
 from telegram_bot_pagination import InlineKeyboardPaginator
 
-import db
+from bot import db
 from config import (
     HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, MAX_MESSAGE_LENGTH, DIR, DIR_COMICS, DIR_LOG, COMMANDS_PER_PAGE
 )
-from regexp_patterns import PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN, fill_string_pattern
+from bot.regexp_patterns import PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN, fill_string_pattern
 from third_party import bash_im
 
 

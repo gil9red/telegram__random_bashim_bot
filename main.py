@@ -11,13 +11,14 @@ from threading import Thread
 # pip install python-telegram-bot
 from telegram.ext import Updater, Defaults
 
-import commands
 import common
-import db
+from bot import commands, db
 from config import TOKEN, DIR_COMICS
 from common import log, log_backup
-from db_utils import do_backup
-from parsers import download_random_quotes, download_main_page_quotes, download_seq_page_quotes, run_parser_health_check
+from bot.db_utils import do_backup
+from bot.parsers import (
+    download_random_quotes, download_main_page_quotes, download_seq_page_quotes, run_parser_health_check
+)
 
 
 def main():

@@ -14,7 +14,7 @@ from threading import RLock
 # pip install schedule
 import schedule
 
-import db
+from bot import db
 from config import DIR
 from third_party import bash_im
 from third_party.notifications import send_telegram_notification_error
