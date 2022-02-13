@@ -57,7 +57,7 @@ def process_request(log: logging.Logger):
             result = func(update, context)
             elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
 
-            log.debug(f'[{func.__name__}] Elapsed {elapsed_ms} ms')
+            log.debug(f'[{func_name}] Elapsed {elapsed_ms} ms')
 
             # Поддержка List[Quote] (для on_get_quotes). Это для учёта цитат среди
             # просмотренных ранее при получении группы цитат из результата поиска
