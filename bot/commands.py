@@ -724,8 +724,8 @@ def on_get_users_short(update: Update, context: CallbackContext):
 def on_get_users(update: Update, context: CallbackContext):
     r"""
     Получение пользователей:
-     - /get_users (\d+)
-     - get[ _]users (\d+)
+     - /get_users
+     - get[ _]users
     """
 
     message = update.effective_message
