@@ -1227,7 +1227,7 @@ def setup(updater: Updater):
         )
     )
 
-    dp.add_handler(CommandHandler('on_get_errors_short', on_get_errors_short, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler('get_errors_short', on_get_errors_short, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
             FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]errors[ _]short$')),
