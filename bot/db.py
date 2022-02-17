@@ -619,31 +619,6 @@ if __name__ == '__main__':
     BaseModel.print_count_of_tables()
     print()
 
-    errors = Error.get_by_page(page=1)
-    for i, error in enumerate(errors, 1):
-        title = f'{i}. {error.get_short_title()}'
-        print(len(title), title)
-    quit()
-
-
-    quit()
-
-    # print(Error.get_last())
-    err = max(Error.select(), key=lambda x: len(x.error_text))
-    print(len(err.error_text), err.error_text)
-    print(len(err.stack_trace), err.stack_trace)
-
-    print()
-
-    err = max(Error.select(), key=lambda x: len(x.stack_trace))
-    print(len(err.error_text), err.error_text)
-    print(len(err.stack_trace), err.stack_trace)
-
-    # for error in Error.select():
-    #     print(len(error.error_text))
-    #     print(len(error.error_text))
-    quit()
-
     from config import ADMIN_USERNAME
     admin: User = User.get(User.username == ADMIN_USERNAME[1:])
     print('Admin:', admin)
