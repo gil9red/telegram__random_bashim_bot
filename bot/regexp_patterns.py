@@ -22,6 +22,8 @@ PATTERN_HELP_ADMIN = re.compile(r'^help_admin_by_page_(\d+)$')
 PATTERN_GET_USERS_SHORT_BY_PAGE = re.compile(r'^get_users_short_by_page_(\d+)$')
 PATTERN_GET_USER_BY_PAGE = re.compile(r'^get_user_by_page_(\d+)$')
 
+PATTERN_GET_ERRORS_SHORT_BY_PAGE = re.compile(r'^get_errors_short_by_page_(\d+)$')
+
 
 # SOURCE: https://github.com/gil9red/telegram_bot__gamebook/blob/7b7399c83ae6249da9dc92ea5dc475cc0565edc0/bot/regexp.py#L22
 def fill_string_pattern(pattern: re.Pattern, *args) -> str:

@@ -20,7 +20,7 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, Callb
 import bot.db as db
 from config import (
     ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY,
-    MAX_MESSAGE_LENGTH, ITEMS_PER_PAGE, LENGTH_TEXT_OF_SMALL_QUOTE
+    MAX_MESSAGE_LENGTH, ITEMS_PER_PAGE, ERRORS_PER_PAGE, LENGTH_TEXT_OF_SMALL_QUOTE
 )
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
@@ -32,7 +32,7 @@ from bot.db_utils import process_request, get_user_message_repr, catch_error
 from bot.regexp_patterns import (
     PATTERN_QUOTE_STATS, PATTERN_QUERY_QUOTE_STATS, PATTERN_COMICS_STATS, PATTERN_GET_QUOTES,
     PATTERN_GET_USERS_SHORT_BY_PAGE, PATTERN_GET_USER_BY_PAGE, PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN,
-    PATTERN_GET_BY_DATE, PATTERN_PAGE_GET_BY_DATE,
+    PATTERN_GET_BY_DATE, PATTERN_PAGE_GET_BY_DATE, PATTERN_GET_ERRORS_SHORT_BY_PAGE,
     fill_string_pattern
 )
 from third_party import bash_im
@@ -986,6 +986,45 @@ def on_quote_comics(update: Update, context: CallbackContext):
         query.message.reply_media_group(media=media, quote=True)
 
 
+@mega_process
+def on_get_errors_short(update: Update, context: CallbackContext):
+    r"""
+    Получение ошибок (короткая):
+     - /get_errors_short
+     - get[ _]errors[ _]short
+    """
+
+    message = update.effective_message
+
+    query = update.callback_query
+    if query:
+        query.answer()
+
+    page = get_page(context)
+
+    total = db.Error.select().count()
+    items_per_page = ERRORS_PER_PAGE
+    start = ((page - 1) * items_per_page) + 1
+
+    errors = db.Error.get_by_page(page=page, items_per_page=items_per_page)
+
+    items = []
+    for i, error in enumerate(errors, start):
+        short_title = error.get_short_title()
+        short_title = f'{i}. {short_title}'
+        items.append(short_title)
+
+    text = 'Ошибки:\n' + '\n'.join(items)
+
+    reply_text_or_edit_with_keyboard_paginator(
+        message, query, text,
+        page_count=total,
+        items_per_page=items_per_page,
+        current_page=page,
+        data_pattern=fill_string_pattern(PATTERN_GET_ERRORS_SHORT_BY_PAGE, '{page}'),
+    )
+
+
 @catch_error(log)
 def on_error(update: Update, context: CallbackContext):
     log.error('Error: %s\nUpdate: %s', context.error, update, exc_info=context.error)
@@ -1187,6 +1226,15 @@ def setup(updater: Updater):
             on_cache
         )
     )
+
+    dp.add_handler(CommandHandler('on_get_errors_short', on_get_errors_short, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]errors[ _]short$')),
+            on_get_errors_short
+        )
+    )
+    dp.add_handler(CallbackQueryHandler(on_get_errors_short, pattern=PATTERN_GET_ERRORS_SHORT_BY_PAGE))
 
     dp.add_handler(CallbackQueryHandler(on_get_quotes, pattern=PATTERN_GET_QUOTES))
 

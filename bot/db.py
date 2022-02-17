@@ -20,7 +20,7 @@ import telegram
 
 from third_party import bash_im
 from third_party.bash_im import shorten, DATE_FORMAT_QUOTE
-from config import QUOTES_LIMIT, ITEMS_PER_PAGE, DB_FILE_NAME, DB_FILE_NAME_ERROR
+from config import ERRORS_PER_PAGE, DB_FILE_NAME, DB_FILE_NAME_ERROR, ITEMS_PER_PAGE, QUOTES_LIMIT
 
 
 def get_clear_name(full_name: str) -> str:
@@ -578,7 +578,7 @@ class Error(BaseModel):
         if isinstance(func, Callable):
             func = func.__name__
 
-        Error.create(
+        return cls.create(
             func_name=func,
             exception_class=e.__class__.__name__,
             error_text=str(e),
@@ -587,6 +587,25 @@ class Error(BaseModel):
             chat_id=chat_id,
             message_id=message_id,
         )
+
+    @classmethod
+    def get_by_page(
+            cls,
+            page: int = 1,
+            items_per_page: int = ERRORS_PER_PAGE,
+            order_by: Field = None,
+    ) -> List['User']:
+        if not order_by:
+            order_by = cls.date_time.desc()
+
+        return cls.paginating(
+            page=page,
+            items_per_page=items_per_page,
+            order_by=order_by
+        )
+
+    def get_short_title(self) -> str:
+        return f'[{self.date_time:%d/%m/%Y %H:%M:%S}, {self.func_name}, {self.exception_class}] {self.error_text!r}'
 
 
 db.connect()
@@ -599,6 +618,31 @@ db_error.create_tables([Error])
 if __name__ == '__main__':
     BaseModel.print_count_of_tables()
     print()
+
+    errors = Error.get_by_page(page=1)
+    for i, error in enumerate(errors, 1):
+        title = f'{i}. {error.get_short_title()}'
+        print(len(title), title)
+    quit()
+
+
+    quit()
+
+    # print(Error.get_last())
+    err = max(Error.select(), key=lambda x: len(x.error_text))
+    print(len(err.error_text), err.error_text)
+    print(len(err.stack_trace), err.stack_trace)
+
+    print()
+
+    err = max(Error.select(), key=lambda x: len(x.stack_trace))
+    print(len(err.error_text), err.error_text)
+    print(len(err.stack_trace), err.stack_trace)
+
+    # for error in Error.select():
+    #     print(len(error.error_text))
+    #     print(len(error.error_text))
+    quit()
 
     from config import ADMIN_USERNAME
     admin: User = User.get(User.username == ADMIN_USERNAME[1:])
