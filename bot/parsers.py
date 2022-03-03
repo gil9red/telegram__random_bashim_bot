@@ -19,6 +19,7 @@ from config import DIR
 from third_party import bash_im
 from third_party.notifications import send_telegram_notification_error
 
+
 NEXT_CHECKED_PAGE = DIR / '_NEXT_CHECKED_PAGE.txt'
 
 
@@ -195,6 +196,7 @@ def run_parser_health_check(log: logging.Logger):
         except Exception as e:
             log.exception(f'{prefix} Error:')
             send_telegram_notification_error(log.name, str(e))
+            db.Error.create_from(func=run_parser_health_check, e=e)
 
     # Каждый день в 12:00
     scheduler = schedule.Scheduler()
