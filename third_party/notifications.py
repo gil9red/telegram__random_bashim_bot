@@ -60,9 +60,15 @@ def simple_send_sms(text: str, log=None):
     return send_sms(SMS_API_ID, SMS_TO, text, log)
 
 
-def send_telegram_notification(name: str, message: str, type='INFO'):
+def send_telegram_notification(
+        name: str,
+        message: str,
+        type: str = 'INFO',
+        url: str = None,
+        has_delete_button: bool = False,
+):
     try:
-        add_notify(name=name, message=message, type=type)
+        add_notify(name=name, message=message, type=type, url=url, has_delete_button=has_delete_button)
     except Exception as e:
         log = get_logger('error_send_telegram', file=str(DIR / 'errors.txt'))
         log.exception('')
@@ -74,4 +80,4 @@ def send_telegram_notification(name: str, message: str, type='INFO'):
 
 
 def send_telegram_notification_error(name: str, message: str):
-    send_telegram_notification(name, message, 'ERROR')
+    send_telegram_notification(name, message, 'ERROR', has_delete_button=True)
