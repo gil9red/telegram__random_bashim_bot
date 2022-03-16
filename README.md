@@ -6,8 +6,6 @@
 
 ## Скриншоты:
 
-
-| ![screenshots/screenshot_1.jpg](screenshots/screenshot_1.jpg) | ![screenshots/screenshot_2.jpg](screenshots/screenshot_2.jpg) | 
+| ![screenshots/screenshot_1.jpg](screenshots/screenshot_1.jpg) | ![screenshots/screenshot_comics.jpg](screenshots/screenshot_comics.jpg) | 
 | --- | ---  |
-| ![screenshots/screenshot_comics.jpg](screenshots/screenshot_comics.jpg) | ![screenshots/screenshot_settings.jpg](screenshots/screenshot_settings.jpg) |
-| ![screenshots/screenshot_settings_2.jpg](screenshots/screenshot_settings_2.jpg) | |
+| ![screenshots/screenshot_settings.jpg](screenshots/screenshot_settings.jpg) | ![screenshots/screenshot_settings_2.jpg](screenshots/screenshot_settings_2.jpg) |
