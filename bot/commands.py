@@ -426,7 +426,9 @@ def on_request(update: Update, context: CallbackContext) -> Optional[db.Quote]:
         text = 'Закончились уникальные цитаты'
 
         user = db.User.get_from(update.effective_user)
-        if any(user.get_years_of_quotes().values()) or user.get_filter_quote_by_max_length_text() > 0:
+        filter_quote_by_max_length_text = user.get_filter_quote_by_max_length_text()
+        if any(user.get_years_of_quotes().values()) \
+                or (filter_quote_by_max_length_text and filter_quote_by_max_length_text > 0):
             text += '. Попробуйте в настройках убрать фильтрацию цитат по году или размеру.\n/settings'
 
         reply_info(text, update, context)
