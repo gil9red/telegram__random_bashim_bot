@@ -6,7 +6,6 @@ __author__ = 'ipetrash'
 
 import datetime as DT
 import functools
-import html
 import inspect
 import json
 import logging
@@ -27,13 +26,11 @@ from telegram.ext.filters import MergedFilter
 # pip install python-telegram-bot-pagination
 from telegram_bot_pagination import InlineKeyboardPaginator
 
-from bot import db
 from config import (
-    HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, MAX_MESSAGE_LENGTH, DIR, DIR_COMICS, DIR_LOG, COMMANDS_PER_PAGE
+    HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, MAX_MESSAGE_LENGTH, DIR, DIR_LOG, COMMANDS_PER_PAGE,
+    DATE_FORMAT, DATE_TIME_FORMAT
 )
 from bot.regexp_patterns import PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN, fill_string_pattern
-from third_party import bash_im
-
 
 BOT: Bot = None
 
@@ -124,6 +121,14 @@ def get_elapsed_time(date_time: DT.datetime) -> str:
     day = get_plural_days(delta.days)
     diff = str(delta).replace('days', day).replace('day', day)
     return diff.split('.')[0]
+
+
+def get_date_time_str(date_time: DT.datetime) -> str:
+    return date_time.strftime(DATE_TIME_FORMAT)
+
+
+def get_date_str(date: Union[DT.date, DT.datetime]) -> str:
+    return date.strftime(DATE_FORMAT)
 
 
 def fill_commands_for_help(dispatcher):
@@ -291,65 +296,6 @@ def log_func(log: logging.Logger):
     return actual_decorator
 
 
-def update_quote(
-        quote_id: int,
-        update: Update = None,
-        context: CallbackContext = None,
-        log: logging.Logger = None,
-):
-    need_reply = update and context
-
-    quote_bashim = bash_im.Quote.parse_from(quote_id)
-    if not quote_bashim:
-        text = f'Цитаты #{quote_id} на сайте нет'
-        log and log.info(text)
-        need_reply and reply_error(text, update, context)
-        return
-
-    quote_db: db.Quote = db.Quote.get_or_none(quote_id)
-    if not quote_db:
-        log and log.info(f'Цитаты #{quote_id} в базе нет, будет создание цитаты')
-
-        # При отсутствии, цитата будет добавлена в базу
-        db.Quote.get_from(quote_bashim)
-
-        # Сразу же пробуем скачать комиксы
-        quote_bashim.download_comics(DIR_COMICS)
-
-        text = f'Цитата #{quote_id} добавлена в базу'
-        log and log.info(text)
-        need_reply and reply_info(text, update, context)
-
-    else:
-        modified_list = []
-
-        if quote_db.text != quote_bashim.text:
-            quote_db.text = quote_bashim.text
-            modified_list.append('текст')
-
-        # Пробуем скачать комиксы
-        quote_bashim.download_comics(DIR_COMICS)
-
-        if modified_list:
-            quote_db.modification_date = DT.date.today()
-            quote_db.save()
-
-            text = f'Цитата #{quote_id} обновлена ({", ".join(modified_list)})'
-            log and log.info(text)
-            need_reply and reply_info(text, update, context)
-
-        else:
-            text = f'Нет изменений в цитате #{quote_id}'
-            log and log.info(text)
-            need_reply and reply_info(text, update, context)
-
-
-def get_html_message(quote_obj: Union[bash_im.Quote, db.Quote]) -> str:
-    text = html.escape(quote_obj.text)
-    footer = f"""<a href="{quote_obj.url}">{quote_obj.date_str} | #{quote_obj.id}</a>"""
-    return f'{text}\n\n{footer}'
-
-
 def reply_help(update: Update, context: CallbackContext):
     query = update.callback_query
     message = update.effective_message
@@ -422,22 +368,6 @@ def reply_info(text: str, update: Update, context: CallbackContext, **kwargs):
         text = text[:MAX_MESSAGE_LENGTH-3] + '...'
 
     update.effective_message.reply_text(text, **kwargs)
-
-
-def reply_quote(
-        quote_obj: Union[bash_im.Quote, db.Quote],
-        update: Update,
-        context: CallbackContext,
-        reply_markup: ReplyKeyboardMarkup = None,
-        **kwargs
-):
-    # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
-    update.effective_message.reply_html(
-        get_html_message(quote_obj),
-        disable_web_page_preview=True,
-        reply_markup=reply_markup,
-        **kwargs
-    )
 
 
 log = get_logger(

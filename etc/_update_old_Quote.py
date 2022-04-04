@@ -8,7 +8,7 @@ import datetime as DT
 from random import randint
 import time
 
-from common import update_quote
+from bot.db_utils import update_quote
 from bot.db import Quote, fn
 
 

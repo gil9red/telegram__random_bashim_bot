@@ -25,11 +25,12 @@ from config import (
 )
 from common import (
     log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
-    update_quote, reply_help, reply_error, reply_quote, reply_info, START_TIME, get_elapsed_time,
-    get_deep_linking, split_list, get_page, is_equal_inline_keyboards, reply_text_or_edit_with_keyboard_paginator,
-    get_html_message
+    reply_help, reply_error, reply_info, START_TIME, get_elapsed_time, get_date_str,
+    get_deep_linking, split_list, get_page, is_equal_inline_keyboards, reply_text_or_edit_with_keyboard_paginator
 )
-from bot.db_utils import process_request, get_user_message_repr, catch_error
+from bot.db_utils import (
+    process_request, get_user_message_repr, catch_error, update_quote, get_html_message, reply_quote
+)
 from bot.regexp_patterns import (
     PATTERN_QUOTE_STATS, PATTERN_QUERY_QUOTE_STATS, PATTERN_COMICS_STATS, PATTERN_GET_QUOTES,
     PATTERN_GET_USERS_SHORT_BY_PAGE, PATTERN_GET_USER_BY_PAGE, PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN,
@@ -531,7 +532,7 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
 Цитат <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>
 Запросов: <b>{db.Request.select().count()}</b>
 
-Бот запущен с <b>{START_TIME:%d/%m/%Y}</b> (прошло <b>{get_elapsed_time(START_TIME)}</b>)
+Бот запущен с <b>{get_date_str(START_TIME)}</b> (прошло <b>{get_elapsed_time(START_TIME)}</b>)
 С первого запроса прошло <b>{get_elapsed_time(db.Request.get_first_date_time())}</b>
     '''
 

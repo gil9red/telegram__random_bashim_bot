@@ -21,6 +21,7 @@ import telegram
 from third_party import bash_im
 from third_party.bash_im import shorten, DATE_FORMAT_QUOTE
 from config import ERRORS_PER_PAGE, DB_FILE_NAME, DB_FILE_NAME_ERROR, ITEMS_PER_PAGE, QUOTES_LIMIT
+from common import get_date_time_str, get_date_str
 
 
 def get_clear_name(full_name: str) -> str:
@@ -273,7 +274,7 @@ class User(BaseModel):
             full_name += ' @' + self.username
 
         full_name = get_clear_name(full_name)
-        last_activity = f'{self.last_activity:%d/%m/%Y %H:%M:%S}'
+        last_activity = get_date_time_str(self.last_activity)
 
         return f'{full_name!r}, last_activity: {last_activity}, quotes: {self.get_total_quotes()}'
 
@@ -605,7 +606,8 @@ class Error(BaseModel):
         )
 
     def get_short_title(self) -> str:
-        return f'[{self.date_time:%d/%m/%Y %H:%M:%S}, {self.func_name}, {self.exception_class}] {self.error_text!r}'
+        date_time_str = get_date_time_str(self.date_time)
+        return f'[{date_time_str}, {self.func_name}, {self.exception_class}] {self.error_text!r}'
 
 
 db.connect()
@@ -699,9 +701,9 @@ if __name__ == '__main__':
 
     sub_query = Request.get_all_quote_id_by_user(admin, fields=[Request.quote_id, Request.date_time])
     quote_id = 102776
-    items = [(i, x.date_time) for i, x in enumerate(sub_query) if x.quote_id == quote_id]
+    items = [(i, get_date_str(x.date_time)) for i, x in enumerate(sub_query) if x.quote_id == quote_id]
     max_num_len = len(str(max(x[0] for x in items)))
-    str_template = '  #{:<' + str(max_num_len) + '} {:%d/%m/%Y}'
+    str_template = '  #{:<%s} {}' % (max_num_len,)
     text = '\n'.join(str_template.format(num, date) for num, date in items)
     print(
         f'Quote #{quote_id} found in:\n{text}'
