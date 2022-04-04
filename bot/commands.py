@@ -713,7 +713,7 @@ def on_get_users_short(update: Update, context: CallbackContext):
         short_title = f'{i}. {short_title}'
         items.append(short_title)
 
-    text = 'Пользователи:\n' + '\n'.join(items)
+    text = f'Пользователи ({total_users}):\n' + '\n'.join(items)
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query, text,
