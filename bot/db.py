@@ -318,6 +318,40 @@ class Chat(BaseModel):
             )
         return chat_db
 
+    @classmethod
+    def get_by_page(
+            cls,
+            page: int = 1,
+            items_per_page: int = ITEMS_PER_PAGE,
+            order_by: Field = None,
+            filters: Iterable = None,
+    ) -> List['Chat']:
+        if not order_by:
+            order_by = cls.last_activity.desc()
+
+        return cls.paginating(
+            page=page,
+            items_per_page=items_per_page,
+            order_by=order_by,
+            filters=filters,
+        )
+
+    def get_short_title_for_group(self) -> str:
+        title = shorten(self.title.strip())
+        if self.username:
+            title += f' @{self.username}'
+
+        title = title.strip()
+        if not title:
+            title = f'#{self.id}'
+
+        last_activity = get_date_time_str(self.last_activity)
+
+        query_all_requests = Request.select().where(Request.chat == self)
+        requests = query_all_requests.count()
+
+        return f'{title!r}, type: {self.type}, last_activity: {last_activity}, requests: {requests}'
+
 
 class Quote(BaseModel):
     url = TextField(unique=True)

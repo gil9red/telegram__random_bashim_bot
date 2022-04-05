@@ -35,6 +35,7 @@ from bot.regexp_patterns import (
     PATTERN_QUOTE_STATS, PATTERN_QUERY_QUOTE_STATS, PATTERN_COMICS_STATS, PATTERN_GET_QUOTES,
     PATTERN_GET_USERS_SHORT_BY_PAGE, PATTERN_GET_USER_BY_PAGE, PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN,
     PATTERN_GET_BY_DATE, PATTERN_PAGE_GET_BY_DATE, PATTERN_GET_ERRORS_SHORT_BY_PAGE,
+    PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE,
     fill_string_pattern
 )
 from third_party import bash_im
@@ -756,6 +757,52 @@ def on_get_users(update: Update, context: CallbackContext):
 
 
 @mega_process
+def on_get_group_chats_short(update: Update, context: CallbackContext):
+    r"""
+    Получение групповых чатов (короткая):
+     - /get_group_chats_short
+     - get group chats short
+    """
+
+    message = update.effective_message
+
+    query = update.callback_query
+    if query:
+        query.answer()
+
+    page = get_page(context)
+
+    # Для получения только групповых чатов
+    filters = db.Chat.type != 'private'
+
+    total_group_chats = db.Chat.select().where(*filters).count()
+    items_per_page = ITEMS_PER_PAGE
+    start = ((page - 1) * items_per_page) + 1
+
+    chats = db.Chat.get_by_page(
+        page=page,
+        items_per_page=items_per_page,
+        filters=filters,
+    )
+
+    items = []
+    for i, chat in enumerate(chats, start):
+        short_title = chat.get_short_title_for_group()
+        short_title = f'{i}. {short_title}'
+        items.append(short_title)
+
+    text = f'Чаты ({total_group_chats}):\n' + '\n'.join(items)
+
+    reply_text_or_edit_with_keyboard_paginator(
+        message, query, text,
+        page_count=total_group_chats,
+        items_per_page=items_per_page,
+        current_page=page,
+        data_pattern=fill_string_pattern(PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE, '{page}'),
+    )
+
+
+@mega_process
 def on_get_quote(update: Update, context: CallbackContext) -> Optional[db.Quote]:
     """
     Получение цитаты из базы:
@@ -1168,6 +1215,15 @@ def setup(updater: Updater):
         )
     )
     dp.add_handler(CallbackQueryHandler(on_get_users, pattern=PATTERN_GET_USER_BY_PAGE))
+
+    dp.add_handler(CommandHandler('get_group_chats_short', on_get_group_chats_short, FILTER_BY_ADMIN))
+    dp.add_handler(
+        MessageHandler(
+            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]group[ _]chats[ _]short$')),
+            on_get_group_chats_short
+        )
+    )
+    dp.add_handler(CallbackQueryHandler(on_get_users_short, pattern=PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE))
 
     dp.add_handler(CommandHandler('get_quote', on_get_quote))
     dp.add_handler(
