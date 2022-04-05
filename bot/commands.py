@@ -773,7 +773,7 @@ def on_get_group_chats_short(update: Update, context: CallbackContext):
     page = get_page(context)
 
     # Для получения только групповых чатов
-    filters = db.Chat.type != 'private'
+    filters = [db.Chat.type != 'private']
 
     total_group_chats = db.Chat.select().where(*filters).count()
     items_per_page = ITEMS_PER_PAGE
@@ -1223,7 +1223,7 @@ def setup(updater: Updater):
             on_get_group_chats_short
         )
     )
-    dp.add_handler(CallbackQueryHandler(on_get_users_short, pattern=PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE))
+    dp.add_handler(CallbackQueryHandler(on_get_group_chats_short, pattern=PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE))
 
     dp.add_handler(CommandHandler('get_quote', on_get_quote))
     dp.add_handler(
