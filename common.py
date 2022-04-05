@@ -10,6 +10,7 @@ import inspect
 import json
 import logging
 import math
+import re
 import sys
 
 from logging.handlers import RotatingFileHandler
@@ -31,6 +32,7 @@ from config import (
     DATE_FORMAT, DATE_TIME_FORMAT
 )
 from bot.regexp_patterns import PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN, fill_string_pattern
+
 
 BOT: Bot = None
 
@@ -129,6 +131,14 @@ def get_date_time_str(date_time: DT.datetime) -> str:
 
 def get_date_str(date: Union[DT.date, DT.datetime]) -> str:
     return date.strftime(DATE_FORMAT)
+
+
+def replace_bad_symbols(text: str) -> str:
+    return re.sub(
+        r'[^a-zA-Zа-яА-ЯёЁ\d ]',
+        lambda m: m.group().encode('unicode-escape').decode('utf-8'),
+        text
+    )
 
 
 def fill_commands_for_help(dispatcher):

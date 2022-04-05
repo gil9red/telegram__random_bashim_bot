@@ -21,7 +21,7 @@ import telegram
 from third_party import bash_im
 from third_party.bash_im import shorten, DATE_FORMAT_QUOTE
 from config import ERRORS_PER_PAGE, DB_FILE_NAME, DB_FILE_NAME_ERROR, ITEMS_PER_PAGE, QUOTES_LIMIT
-from common import get_date_time_str, get_date_str
+from common import get_date_time_str, get_date_str, replace_bad_symbols
 
 
 def get_clear_name(full_name: str) -> str:
@@ -264,16 +264,20 @@ class User(BaseModel):
         )
 
     def get_short_title(self) -> str:
-        full_name = self.first_name
+        full_name = self.first_name.strip()
         if self.last_name:
-            full_name += ' ' + self.last_name
+            full_name += ' ' + self.last_name.strip()
 
+        # NOTE: Была проблема с арабскими буквами в имени из-за чего разворачивало весь текст справа на лево
+        full_name = replace_bad_symbols(full_name)
+        full_name = get_clear_name(full_name)
         full_name = shorten(full_name)
 
         if self.username:
             full_name += ' @' + self.username
 
-        full_name = get_clear_name(full_name)
+        full_name = full_name.strip()
+
         last_activity = get_date_time_str(self.last_activity)
 
         return f'{full_name!r}, last_activity: {last_activity}, quotes: {self.get_total_quotes()}'
@@ -337,7 +341,12 @@ class Chat(BaseModel):
         )
 
     def get_short_title_for_group(self) -> str:
-        title = shorten(self.title.strip())
+        # NOTE: Была проблема с арабскими буквами в имени из-за чего разворачивало весь текст справа на лево
+        title = self.title.strip() if self.title else ''
+        title = replace_bad_symbols(title)
+        title = get_clear_name(title)
+        title = shorten(title)
+
         if self.username:
             title += f' @{self.username}'
 
