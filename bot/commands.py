@@ -49,7 +49,8 @@ def composed(*decs) -> Callable:
     return deco
 
 
-def mega_process(func) -> Callable:
+def mega_process(func: Callable) -> Callable:
+    # NOTE: Вызов декораторов соответствует порядку в аргументах
     return composed(
         catch_error(log),
         process_request(log),
