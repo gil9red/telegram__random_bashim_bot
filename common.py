@@ -100,9 +100,8 @@ def has_admin_filter(filter_handler) -> bool:
 
 
 def get_deep_linking(argument, update: Update) -> str:
-    bot_name = BOT.name.lstrip('@')
     from_message_id = update.effective_message.message_id
-    return f'[{argument}](https://t.me/{bot_name}?start={argument}_{from_message_id})'
+    return f'[{argument}]({BOT.link}?start={argument}_{from_message_id})'
 
 
 def get_plural_days(n: int) -> str:
