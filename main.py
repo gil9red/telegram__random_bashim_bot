@@ -47,11 +47,12 @@ def main():
 
 
 if __name__ == '__main__':
-    Thread(target=download_main_page_quotes, args=[log, DIR_COMICS]).start()
-    Thread(target=download_seq_page_quotes, args=[log, DIR_COMICS]).start()
-    Thread(target=download_random_quotes, args=[log, DIR_COMICS]).start()
+    # TODO: Вернуть, если https://bash.im станет доступен
+    # Thread(target=download_main_page_quotes, args=[log, DIR_COMICS]).start()
+    # Thread(target=download_seq_page_quotes, args=[log, DIR_COMICS]).start()
+    # Thread(target=download_random_quotes, args=[log, DIR_COMICS]).start()
+    # Thread(target=run_parser_health_check, args=[log]).start()
     Thread(target=do_backup, args=[log_backup]).start()
-    Thread(target=run_parser_health_check, args=[log]).start()
 
     while True:
         try:
