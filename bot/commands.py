@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'ipetrash'
+__author__ = "ipetrash"
 
 
 import datetime as DT
@@ -13,30 +13,76 @@ from typing import Optional, Dict, List, Callable
 
 # pip install python-telegram-bot
 from telegram import (
-    Update, InputMediaPhoto, InlineKeyboardButton, InlineKeyboardMarkup, ChatAction, ParseMode
+    Update,
+    InputMediaPhoto,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ChatAction,
+    ParseMode,
 )
 from telegram.error import NetworkError
-from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext, CallbackQueryHandler
+from telegram.ext import (
+    Updater,
+    MessageHandler,
+    CommandHandler,
+    Filters,
+    CallbackContext,
+    CallbackQueryHandler,
+)
 
 import bot.db as db
 from config import (
-    ERROR_TEXT, DIR_COMICS, CHECKBOX, CHECKBOX_EMPTY, RADIOBUTTON, RADIOBUTTON_EMPTY,
-    MAX_MESSAGE_LENGTH, ITEMS_PER_PAGE, ERRORS_PER_PAGE, LENGTH_TEXT_OF_SMALL_QUOTE
+    ERROR_TEXT,
+    DIR_COMICS,
+    CHECKBOX,
+    CHECKBOX_EMPTY,
+    RADIOBUTTON,
+    RADIOBUTTON_EMPTY,
+    MAX_MESSAGE_LENGTH,
+    ITEMS_PER_PAGE,
+    ERRORS_PER_PAGE,
+    LENGTH_TEXT_OF_SMALL_QUOTE,
 )
 from common import (
-    log, log_func, REPLY_KEYBOARD_MARKUP, FILTER_BY_ADMIN, fill_commands_for_help,
-    reply_help, reply_error, reply_info, START_TIME, get_elapsed_time, get_date_str,
-    get_deep_linking, split_list, get_page, is_equal_inline_keyboards, reply_text_or_edit_with_keyboard_paginator
+    log,
+    log_func,
+    REPLY_KEYBOARD_MARKUP,
+    FILTER_BY_ADMIN,
+    fill_commands_for_help,
+    reply_help,
+    reply_error,
+    reply_info,
+    START_TIME,
+    get_elapsed_time,
+    get_date_str,
+    get_deep_linking,
+    split_list,
+    get_page,
+    is_equal_inline_keyboards,
+    reply_text_or_edit_with_keyboard_paginator,
 )
 from bot.db_utils import (
-    process_request, get_user_message_repr, catch_error, update_quote, get_html_message, reply_quote
+    process_request,
+    get_user_message_repr,
+    catch_error,
+    update_quote,
+    get_html_message,
+    reply_quote,
 )
 from bot.regexp_patterns import (
-    PATTERN_QUOTE_STATS, PATTERN_QUERY_QUOTE_STATS, PATTERN_COMICS_STATS, PATTERN_GET_QUOTES,
-    PATTERN_GET_USERS_SHORT_BY_PAGE, PATTERN_GET_USER_BY_PAGE, PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN,
-    PATTERN_GET_BY_DATE, PATTERN_PAGE_GET_BY_DATE, PATTERN_GET_ERRORS_SHORT_BY_PAGE,
+    PATTERN_QUOTE_STATS,
+    PATTERN_QUERY_QUOTE_STATS,
+    PATTERN_COMICS_STATS,
+    PATTERN_GET_QUOTES,
+    PATTERN_GET_USERS_SHORT_BY_PAGE,
+    PATTERN_GET_USER_BY_PAGE,
+    PATTERN_HELP_COMMON,
+    PATTERN_HELP_ADMIN,
+    PATTERN_GET_BY_DATE,
+    PATTERN_PAGE_GET_BY_DATE,
+    PATTERN_GET_ERRORS_SHORT_BY_PAGE,
     PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE,
-    fill_string_pattern
+    fill_string_pattern,
 )
 from third_party import bash_im
 
@@ -46,6 +92,7 @@ def composed(*decs) -> Callable:
         for dec in reversed(decs):
             f = dec(f)
         return f
+
     return deco
 
 
@@ -69,14 +116,14 @@ class SettingState(enum.Enum):
         self.is_visible = is_visible
 
     def get_callback_data(self) -> str:
-        return str(self).replace('.', '_')
+        return str(self).replace(".", "_")
 
     def get_pattern_with_params(self) -> re.Pattern:
-        return re.compile('^' + self.get_callback_data() + '_(.+)$')
+        return re.compile("^" + self.get_callback_data() + "_(.+)$")
 
     def get_pattern_full(self) -> re.Pattern:
         return re.compile(
-            '^' + self.get_callback_data() + '$|' + self.get_pattern_with_params().pattern
+            "^" + self.get_callback_data() + "$|" + self.get_pattern_with_params().pattern
         )
 
 
@@ -88,19 +135,21 @@ INLINE_KEYBOARD_BUTTON_BACK = InlineKeyboardButton(
 def get_random_quote(update: Update, context: CallbackContext) -> Optional[db.Quote]:
     user = db.User.get_from(update.effective_user)
 
-    if 'quotes' not in context.user_data:
-        context.user_data['quotes'] = []
+    if "quotes" not in context.user_data:
+        context.user_data["quotes"] = []
 
-    quotes = context.user_data['quotes']
-    log.debug(f'get_random_quote (quotes: {len(quotes)})')
+    quotes = context.user_data["quotes"]
+    log.debug(f"get_random_quote (quotes: {len(quotes)})")
 
     # Заполняем список новыми цитатами, если он пустой
     if not quotes:
-        log.debug('Quotes is empty, filling from database.')
+        log.debug("Quotes is empty, filling from database.")
 
         years_of_quotes = user.get_years_of_quotes()
         filter_quote_by_max_length_text = user.get_filter_quote_by_max_length_text()
-        update_cache(user, years_of_quotes, filter_quote_by_max_length_text, log, update, context)
+        update_cache(
+            user, years_of_quotes, filter_quote_by_max_length_text, log, update, context
+        )
 
     if quotes:
         return quotes.pop()
@@ -116,7 +165,7 @@ def get_context_value(context: CallbackContext) -> Optional[str]:
             value = context.match.group(1)
         else:
             # Значение из значений команды
-            value = ' '.join(context.args)
+            value = " ".join(context.args)
     except:
         pass
 
@@ -132,19 +181,21 @@ def get_quote_id(context: CallbackContext) -> Optional[int]:
 
 
 def reply_local_quote(
-        update: Update, context: CallbackContext,
-        quote_id: int = None, **kwargs
+    update: Update,
+    context: CallbackContext,
+    quote_id: int = None,
+    **kwargs,
 ) -> Optional[db.Quote]:
     if not quote_id:
         quote_id = get_quote_id(context)
 
     if not quote_id:
-        reply_error('Номер цитаты не указан', update, context)
+        reply_error("Номер цитаты не указан", update, context)
         return
 
     quote_obj = db.Quote.get_or_none(quote_id)
     if not quote_obj:
-        reply_error(f'Цитаты #{quote_id} нет в базе', update, context)
+        reply_error(f"Цитаты #{quote_id} нет в базе", update, context)
         return
 
     reply_quote(
@@ -157,13 +208,13 @@ def reply_local_quote(
 
 
 def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
-    sep = ', '
+    sep = ", "
 
     def _get_search_result(items: list) -> str:
         result = sep.join(get_deep_linking(quote_id, update) for quote_id in items)
-        return f'Найдено {len(items)}:\n{result}'
+        return f"Найдено {len(items)}:\n{result}"
 
-    def _get_result(items: list, post_fix='...') -> str:
+    def _get_result(items: list, post_fix="...") -> str:
         text = _get_search_result(items)
         if len(text) <= MAX_MESSAGE_LENGTH:
             return text
@@ -189,7 +240,7 @@ def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
     if items:
         text = _get_result(items)
     else:
-        text = 'Не найдено!'
+        text = "Не найдено!"
 
     from_message_id = update.effective_message.message_id
 
@@ -201,16 +252,16 @@ def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
 
     buttons = []
     for i in range(0, len(items[:max_results]), parts):
-        sub_items = items[i:i + parts]
+        sub_items = items[i: i + parts]
         start = i + 1
         end = i + len(sub_items)
-        text_btn = f'{start}' if start == end else f'{start}-{end}'
+        text_btn = f"{start}" if start == end else f"{start}-{end}"
 
-        data = fill_string_pattern(PATTERN_GET_QUOTES, from_message_id, ",".join(map(str, sub_items)))
-
-        buttons.append(
-            InlineKeyboardButton(text_btn, callback_data=data)
+        data = fill_string_pattern(
+            PATTERN_GET_QUOTES, from_message_id, ",".join(map(str, sub_items))
         )
+
+        buttons.append(InlineKeyboardButton(text_btn, callback_data=data))
 
     buttons = split_list(buttons, columns=5)
     reply_markup = InlineKeyboardMarkup(buttons)
@@ -225,13 +276,15 @@ def reply_quote_ids(items: List[int], update: Update, context: CallbackContext):
     )
 
 
-def reply_get_used_quote(user_id: int, quote_id: int, update: Update, context: CallbackContext):
+def reply_get_used_quote(
+    user_id: int, quote_id: int, update: Update, context: CallbackContext
+):
     sub_query = db.Request.get_all_quote_id_by_user(user_id)
     items = [i for i, x in enumerate(sub_query) if x.quote_id == quote_id]
     if items:
-        text = f'Цитата #{quote_id} найдена в {items}'
+        text = f"Цитата #{quote_id} найдена в {items}"
     else:
-        text = f'Цитата #{quote_id} не найдена'
+        text = f"Цитата #{quote_id} не найдена"
 
     reply_info(text, update, context)
 
@@ -242,7 +295,7 @@ def on_start(update: Update, context: CallbackContext) -> Optional[db.Quote]:
     # https://t.me/<bot_name>?start=<start_argument>
     if context.args:
         # ["400245_2046"] -> 400245, 2046
-        quote_id, message_id = map(int, context.args[0].split('_'))
+        quote_id, message_id = map(int, context.args[0].split("_"))
         quote = reply_local_quote(
             update, context,
             quote_id=quote_id,
@@ -269,20 +322,20 @@ def on_help(update: Update, context: CallbackContext):
 
 
 def update_cache(
-        user: db.User,
-        years_of_quotes: Dict[int, bool],
-        filter_quote_by_max_length_text: Optional[int],
-        log: logging.Logger,
-        update: Update,
-        context: CallbackContext
+    user: db.User,
+    years_of_quotes: Dict[int, bool],
+    filter_quote_by_max_length_text: Optional[int],
+    log: logging.Logger,
+    update: Update,
+    context: CallbackContext,
 ):
     years = [year for year, is_selected in years_of_quotes.items() if is_selected]
-    log.debug(f'Start [{update_cache.__name__}], selected years: {years}')
+    log.debug(f"Start [{update_cache.__name__}], selected years: {years}")
 
-    if 'quotes' not in context.user_data:
-        context.user_data['quotes'] = []
+    if "quotes" not in context.user_data:
+        context.user_data["quotes"] = []
 
-    quotes = context.user_data['quotes']
+    quotes = context.user_data["quotes"]
     quotes.clear()
 
     if years:
@@ -293,7 +346,7 @@ def update_cache(
         filter_quote_by_max_length_text=filter_quote_by_max_length_text
     )
 
-    log.debug(f'Finish [{update_cache.__name__}]. Quotes: {len(quotes)}')
+    log.debug(f"Finish [{update_cache.__name__}]. Quotes: {len(quotes)}")
 
 
 @mega_process
@@ -313,11 +366,14 @@ def on_settings(update: Update, context: CallbackContext):
     message = update.effective_message
 
     reply_markup = InlineKeyboardMarkup.from_column([
-        InlineKeyboardButton(settings_state.title, callback_data=settings_state.get_callback_data())
+        InlineKeyboardButton(
+            settings_state.title,
+            callback_data=settings_state.get_callback_data()
+        )
         for settings_state in SettingState if settings_state.is_visible
     ])
 
-    text = 'Выбор настроек:'
+    text = "Выбор настроек:"
 
     # Если функция вызвана из CallbackQueryHandler
     if query:
@@ -345,16 +401,18 @@ def on_settings_year(update: Update, context: CallbackContext):
             return
 
         years_of_quotes[year] = not years_of_quotes[year]
-        log.debug(f'    {year} = {years_of_quotes[year]}')
+        log.debug(f"    {year} = {years_of_quotes[year]}")
 
         filter_quote_by_max_length_text = user.get_filter_quote_by_max_length_text()
-        update_cache(user, years_of_quotes, filter_quote_by_max_length_text, log, update, context)
+        update_cache(
+            user, years_of_quotes, filter_quote_by_max_length_text, log, update, context
+        )
 
     # Генерация матрицы кнопок
     items = [
         InlineKeyboardButton(
-            (CHECKBOX if is_selected else CHECKBOX_EMPTY) + f' {year}',
-            callback_data=fill_string_pattern(pattern, year)
+            (CHECKBOX if is_selected else CHECKBOX_EMPTY) + f" {year}",
+            callback_data=fill_string_pattern(pattern, year),
         )
         for year, is_selected in years_of_quotes.items()
     ]
@@ -391,7 +449,7 @@ def on_settings_filter(update: Update, context: CallbackContext):
         if not limit:
             limit = None
 
-        log.debug(f'    filter_quote_by_max_length_text = {limit}')
+        log.debug(f"    filter_quote_by_max_length_text = {limit}")
         user.set_filter_quote_by_max_length_text(limit)
 
         # После изменения фильтра нужно перегенерировать кэш
@@ -403,12 +461,12 @@ def on_settings_filter(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup.from_column([
         # Пусть без ограничений будет 0, чтобы не переделывать логику с числами выше
         InlineKeyboardButton(
-            (RADIOBUTTON if not limit else RADIOBUTTON_EMPTY) + ' Без ограничений',
+            (RADIOBUTTON if not limit else RADIOBUTTON_EMPTY) + " Без ограничений",
             callback_data=fill_string_pattern(pattern, 0)
         ),
         # Возможны будут другие варианты, но пока наличие значения - наличие флага
         InlineKeyboardButton(
-            (RADIOBUTTON if limit else RADIOBUTTON_EMPTY) + ' Только маленькие',
+            (RADIOBUTTON if limit else RADIOBUTTON_EMPTY) + " Только маленькие",
             callback_data=fill_string_pattern(pattern, LENGTH_TEXT_OF_SMALL_QUOTE)
         ),
         INLINE_KEYBOARD_BUTTON_BACK,
@@ -426,18 +484,19 @@ def on_settings_filter(update: Update, context: CallbackContext):
 def on_request(update: Update, context: CallbackContext) -> Optional[db.Quote]:
     quote_obj = get_random_quote(update, context)
     if not quote_obj:
-        text = 'Закончились уникальные цитаты'
+        text = "Закончились уникальные цитаты"
 
         user = db.User.get_from(update.effective_user)
         filter_quote_by_max_length_text = user.get_filter_quote_by_max_length_text()
-        if any(user.get_years_of_quotes().values()) \
-                or (filter_quote_by_max_length_text and filter_quote_by_max_length_text > 0):
-            text += '. Попробуйте в настройках убрать фильтрацию цитат по году или размеру.\n/settings'
+        if any(user.get_years_of_quotes().values()) or (
+            filter_quote_by_max_length_text and filter_quote_by_max_length_text > 0
+        ):
+            text += ". Попробуйте в настройках убрать фильтрацию цитат по году или размеру.\n/settings"
 
         reply_info(text, update, context)
         return
 
-    log.debug('Quote text (%s)', quote_obj.url)
+    log.debug("Quote text (%s)", quote_obj.url)
 
     if quote_obj.has_comics():
         reply_markup = InlineKeyboardMarkup.from_button(
@@ -465,7 +524,7 @@ def on_get_used_quote_in_requests(update: Update, context: CallbackContext):
 
     quote_id = get_quote_id(context)
     if not quote_id:
-        reply_error('Номер цитаты не указан', update, context)
+        reply_error("Номер цитаты не указан", update, context)
         return
 
     user_id = update.effective_user.id
@@ -505,13 +564,13 @@ def on_get_user_stats(update: Update, context: CallbackContext):
     quote_count = user.get_total_quotes()
     quote_with_comics_count = user.get_total_quotes(with_comics=True)
 
-    text = f'''\
+    text = f"""\
 <b>Статистика.</b>
 
 Получено цитат <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>
 Всего запросов боту: <b>{user.requests.count()}</b>
 Разница между первым и последним запросом: <b>{elapsed_days}</b> дней
-    '''
+    """
 
     update.effective_message.reply_html(text)
 
@@ -527,7 +586,7 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
     quote_count = db.Quote.select().count()
     quote_with_comics_count = db.Quote.get_all_with_comics().count()
 
-    text = f'''\
+    text = f"""\
 <b>Статистика админа.</b>
 
 Пользователей: <b>{db.User.select().count()}</b>
@@ -536,7 +595,7 @@ def on_get_admin_stats(update: Update, context: CallbackContext):
 
 Бот запущен с <b>{get_date_str(START_TIME)}</b> (прошло <b>{get_elapsed_time(START_TIME)}</b>)
 С первого запроса прошло <b>{get_elapsed_time(db.Request.get_first_date_time())}</b>
-    '''
+    """
 
     update.effective_message.reply_html(text)
 
@@ -557,15 +616,15 @@ def on_get_number_of_unique_quotes(update: Update, context: CallbackContext):
     quote_count = db.Quote.get_number_of_unique_quotes(user, years)
 
     lines = [
-        '<b>Количество оставшихся уникальных цитат.</b>',
-        '',
-        f'Осталось: <b>{quote_count}</b>',
+        "<b>Количество оставшихся уникальных цитат.</b>",
+        "",
+        f"Осталось: <b>{quote_count}</b>",
     ]
     if years:
         years_str = ", ".join(f"<b>{year}</b>" for year in years)
-        lines.append(f'Фильтрация по годам: {years_str}')
+        lines.append(f"Фильтрация по годам: {years_str}")
 
-    text = '\n'.join(lines).strip()
+    text = "\n".join(lines).strip()
     message.reply_html(text)
 
 
@@ -586,18 +645,18 @@ def on_get_detail_of_unique_quotes(update: Update, context: CallbackContext):
     rows = []
     for year in years_of_quotes:
         count = db.Quote.get_number_of_unique_quotes(user, years=[year])
-        rows.append(f'    <b>{year}</b>: {count}')
+        rows.append(f"    <b>{year}</b>: {count}")
 
         total_count += count
 
     lines = [
-        '<b>Количество оставшихся уникальных цитат.</b>',
-        '',
-        f'Всего осталось <b>{total_count}</b>:'
+        "<b>Количество оставшихся уникальных цитат.</b>",
+        "",
+        f"Всего осталось <b>{total_count}</b>:",
     ]
     lines.extend(rows)
 
-    text = '\n'.join(lines).strip()
+    text = "\n".join(lines).strip()
     message.reply_html(text)
 
 
@@ -620,19 +679,21 @@ def on_get_quote_stats(update: Update, context: CallbackContext):
     quote_with_comics_count = db.Quote.get_all_with_comics().count()
 
     text_year_by_counts = "\n".join(
-        f'    <b>{year}</b>: {count}'
-        for year, count in db.Quote.get_year_by_counts()
+        f"    <b>{year}</b>: {count}" for year, count in db.Quote.get_year_by_counts()
     )
 
-    text = f'''\
+    text = f"""\
 <b>Статистика по цитатам.</b>
 
 Всего <b>{quote_count}</b>, с комиксами <b>{quote_with_comics_count}</b>:
 {text_year_by_counts}
-    '''
+    """
 
     reply_markup = InlineKeyboardMarkup.from_button(
-        InlineKeyboardButton('➡️ Комиксы', callback_data=fill_string_pattern(PATTERN_COMICS_STATS))
+        InlineKeyboardButton(
+            "➡️ Комиксы",
+            callback_data=fill_string_pattern(PATTERN_COMICS_STATS),
+        )
     )
 
     is_new = not message.edit_date
@@ -665,19 +726,22 @@ def on_get_comics_stats(update: Update, context: CallbackContext):
         year_by_number[year] += 1
 
     text_year_by_counts = "\n".join(
-        f'    <b>{year}</b>: {count}'
+        f"    <b>{year}</b>: {count}"
         for year, count in year_by_number.items()
     )
 
-    text = f'''\
+    text = f"""\
 <b>Статистика по комиксам.</b>
 
 Всего <b>{quote_count}</b>:
 {text_year_by_counts}
-    '''
+    """
 
     reply_markup = InlineKeyboardMarkup.from_button(
-        InlineKeyboardButton('⬅️ Назад', callback_data=fill_string_pattern(PATTERN_QUERY_QUOTE_STATS))
+        InlineKeyboardButton(
+            "⬅️ Назад",
+            callback_data=fill_string_pattern(PATTERN_QUERY_QUOTE_STATS),
+        )
     )
 
     message.edit_text(
@@ -712,17 +776,17 @@ def on_get_users_short(update: Update, context: CallbackContext):
     items = []
     for i, user in enumerate(users, start):
         short_title = user.get_short_title()
-        short_title = f'{i}. {short_title}'
+        short_title = f"{i}. {short_title}"
         items.append(short_title)
 
-    text = f'Пользователи ({total_users}):\n' + '\n'.join(items)
+    text = f"Пользователи ({total_users}):\n" + "\n".join(items)
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query, text,
         page_count=total_users,
         items_per_page=items_per_page,
         current_page=page,
-        data_pattern=fill_string_pattern(PATTERN_GET_USERS_SHORT_BY_PAGE, '{page}'),
+        data_pattern=fill_string_pattern(PATTERN_GET_USERS_SHORT_BY_PAGE, "{page}"),
     )
 
 
@@ -746,14 +810,14 @@ def on_get_users(update: Update, context: CallbackContext):
 
     user = db.User.get_by_page(page=page, items_per_page=items_per_page)[0]
     description = get_user_message_repr(user)
-    text = f'Пользователь №{page}:\n{description}'
+    text = f"Пользователь №{page}:\n{description}"
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query, text,
         page_count=total_users,
         items_per_page=items_per_page,
         current_page=page,
-        data_pattern=fill_string_pattern(PATTERN_GET_USER_BY_PAGE, '{page}'),
+        data_pattern=fill_string_pattern(PATTERN_GET_USER_BY_PAGE, "{page}"),
     )
 
 
@@ -774,7 +838,7 @@ def on_get_group_chats_short(update: Update, context: CallbackContext):
     page = get_page(context)
 
     # Для получения только групповых чатов
-    filters = [db.Chat.type != 'private']
+    filters = [db.Chat.type != "private"]
 
     total_group_chats = db.Chat.select().where(*filters).count()
     items_per_page = ITEMS_PER_PAGE
@@ -789,17 +853,19 @@ def on_get_group_chats_short(update: Update, context: CallbackContext):
     items = []
     for i, chat in enumerate(chats, start):
         short_title = chat.get_short_title_for_group()
-        short_title = f'{i}. {short_title}'
+        short_title = f"{i}. {short_title}"
         items.append(short_title)
 
-    text = f'Чаты ({total_group_chats}):\n' + '\n'.join(items)
+    text = f"Чаты ({total_group_chats}):\n" + "\n".join(items)
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query, text,
         page_count=total_group_chats,
         items_per_page=items_per_page,
         current_page=page,
-        data_pattern=fill_string_pattern(PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE, '{page}'),
+        data_pattern=fill_string_pattern(
+            PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE, "{page}"
+        ),
     )
 
 
@@ -852,19 +918,27 @@ def on_get_quote_by_date(update: Update, context: CallbackContext) -> Optional[d
 
         if nearest_date_before:
             date_before_str = nearest_date_before.strftime(db.DATE_FORMAT_QUOTE)
-            buttons.append(InlineKeyboardButton(
-                f'⬅️ {date_before_str}',
-                callback_data=fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, default_page, date_before_str)
-            ))
+            buttons.append(
+                InlineKeyboardButton(
+                    f"⬅️ {date_before_str}",
+                    callback_data=fill_string_pattern(
+                        PATTERN_PAGE_GET_BY_DATE, default_page, date_before_str
+                    ),
+                )
+            )
 
         if nearest_date_after:
             date_after_str = nearest_date_after.strftime(db.DATE_FORMAT_QUOTE)
-            buttons.append(InlineKeyboardButton(
-                f'➡️ {date_after_str}',
-                callback_data=fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, default_page, date_after_str)
-            ))
+            buttons.append(
+                InlineKeyboardButton(
+                    f"➡️ {date_after_str}",
+                    callback_data=fill_string_pattern(
+                        PATTERN_PAGE_GET_BY_DATE, default_page, date_after_str
+                    ),
+                )
+            )
 
-        text = f'Цитаты за <b>{date_str}</b> не существуют. Как насчет посмотреть за ближайшие даты?'
+        text = f"Цитаты за <b>{date_str}</b> не существуют. Как насчет посмотреть за ближайшие даты?"
         reply_markup = InlineKeyboardMarkup.from_row(buttons)
 
         message.reply_html(
@@ -874,10 +948,12 @@ def on_get_quote_by_date(update: Update, context: CallbackContext) -> Optional[d
         )
         return
 
-    quote_obj = items[page-1]
+    quote_obj = items[page - 1]
     text = get_html_message(quote_obj)
 
-    data_pattern = fill_string_pattern(PATTERN_PAGE_GET_BY_DATE, '{page}', date.strftime(db.DATE_FORMAT_QUOTE))
+    data_pattern = fill_string_pattern(
+        PATTERN_PAGE_GET_BY_DATE, "{page}", date.strftime(db.DATE_FORMAT_QUOTE)
+    )
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query,
@@ -904,12 +980,12 @@ def on_get_external_quote(update: Update, context: CallbackContext):
 
     quote_id = get_quote_id(context)
     if not quote_id:
-        reply_error('Номер цитаты не указан', update, context)
+        reply_error("Номер цитаты не указан", update, context)
         return
 
     quote_obj = bash_im.Quote.parse_from(quote_id)
     if not quote_obj:
-        reply_error(f'Цитаты #{quote_id} на сайте нет', update, context)
+        reply_error(f"Цитаты #{quote_id} на сайте нет", update, context)
         return
 
     reply_quote(quote_obj, update, context)
@@ -925,7 +1001,7 @@ def on_update_quote(update: Update, context: CallbackContext):
 
     quote_id = get_quote_id(context)
     if not quote_id:
-        reply_error('Номер цитаты не указан', update, context)
+        reply_error("Номер цитаты не указан", update, context)
         return
 
     update_quote(quote_id, update, context, log)
@@ -985,11 +1061,11 @@ def on_cache(update: Update, context: CallbackContext):
      - cache
     """
 
-    quotes = context.user_data.get('quotes', [])
+    quotes = context.user_data.get("quotes", [])
     reply_info(
-        f'Цитат в кэше пользователя: **{len(quotes)}**',
+        f"Цитат в кэше пользователя: **{len(quotes)}**",
         update, context,
-        parse_mode=ParseMode.MARKDOWN
+        parse_mode=ParseMode.MARKDOWN,
     )
 
 
@@ -1003,7 +1079,7 @@ def on_get_quotes(update: Update, context: CallbackContext) -> List[db.Quote]:
     from_message_id = int(from_message_id)
 
     items = []
-    for quote_id in map(int, quote_ids.split(',')):
+    for quote_id in map(int, quote_ids.split(",")):
         quote = reply_local_quote(
             update, context,
             quote_id=quote_id,
@@ -1028,12 +1104,12 @@ def on_quote_comics(update: Update, context: CallbackContext):
     )
 
     quote_id = query.data
-    files = list(DIR_COMICS.glob(f'quote{quote_id}_*.png'))
+    files = list(DIR_COMICS.glob(f"quote{quote_id}_*.png"))
     max_parts = 10
 
     for i in range(0, len(files), max_parts):
         media = [
-            InputMediaPhoto(f.open('rb')) for f in files[i: i+max_parts]
+            InputMediaPhoto(f.open("rb")) for f in files[i : i + max_parts]
         ]
         query.message.reply_media_group(media=media, quote=True)
 
@@ -1063,23 +1139,23 @@ def on_get_errors_short(update: Update, context: CallbackContext):
     items = []
     for i, error in enumerate(errors, start):
         short_title = error.get_short_title()
-        short_title = f'{i}. {short_title}'
+        short_title = f"{i}. {short_title}"
         items.append(short_title)
 
-    text = 'Ошибки:\n' + '\n'.join(items)
+    text = "Ошибки:\n" + "\n".join(items)
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query, text,
         page_count=total,
         items_per_page=items_per_page,
         current_page=page,
-        data_pattern=fill_string_pattern(PATTERN_GET_ERRORS_SHORT_BY_PAGE, '{page}'),
+        data_pattern=fill_string_pattern(PATTERN_GET_ERRORS_SHORT_BY_PAGE, "{page}"),
     )
 
 
 @catch_error(log)
 def on_error(update: Update, context: CallbackContext):
-    log.error('Error: %s\nUpdate: %s', context.error, update, exc_info=context.error)
+    log.error("Error: %s\nUpdate: %s", context.error, update, exc_info=context.error)
     db.Error.create_from(on_error, context.error, update)
 
     # Не отправляем ошибку пользователю при проблемах с сетью (типа, таймаут)
@@ -1093,32 +1169,28 @@ def on_error(update: Update, context: CallbackContext):
 def setup(updater: Updater):
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler('start', on_start))
+    dp.add_handler(CommandHandler("start", on_start))
 
-    dp.add_handler(CommandHandler('help', on_help))
+    dp.add_handler(CommandHandler("help", on_help))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^help$|^помощь$'),
+            Filters.regex(r"(?i)^help$|^помощь$"),
             on_help
         )
     )
     dp.add_handler(
-        CallbackQueryHandler(
-            on_help, pattern=PATTERN_HELP_COMMON
-        )
+        CallbackQueryHandler(on_help, pattern=PATTERN_HELP_COMMON)
     )
     dp.add_handler(
-        CallbackQueryHandler(
-            on_help, pattern=PATTERN_HELP_ADMIN
-        )
+        CallbackQueryHandler(on_help, pattern=PATTERN_HELP_ADMIN)
     )
 
-    dp.add_handler(CommandHandler('more', on_request))
+    dp.add_handler(CommandHandler("more", on_request))
 
-    dp.add_handler(CommandHandler('settings', on_settings))
+    dp.add_handler(CommandHandler("settings", on_settings))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^settings$|^настройк[иа]$'),
+            Filters.regex(r"(?i)^settings$|^настройк[иа]$"),
             on_settings
         )
     )
@@ -1126,184 +1198,203 @@ def setup(updater: Updater):
         CallbackQueryHandler(on_settings, pattern=SettingState.MAIN.get_pattern_full())
     )
     dp.add_handler(
-        CallbackQueryHandler(on_settings_year, pattern=SettingState.YEAR.get_pattern_full())
+        CallbackQueryHandler(
+            on_settings_year, pattern=SettingState.YEAR.get_pattern_full()
+        )
     )
     dp.add_handler(
-        CallbackQueryHandler(on_settings_filter, pattern=SettingState.FILTER.get_pattern_full())
-    )
-
-    # Возвращение статистики текущего пользователя
-    dp.add_handler(CommandHandler('stats', on_get_user_stats))
-    dp.add_handler(
-        MessageHandler(
-            Filters.regex(r'(?i)^stats$|^статистика$'),
-            on_get_user_stats
+        CallbackQueryHandler(
+            on_settings_filter, pattern=SettingState.FILTER.get_pattern_full()
         )
     )
 
+    # Возвращение статистики текущего пользователя
+    dp.add_handler(CommandHandler("stats", on_get_user_stats))
+    dp.add_handler(
+        MessageHandler(Filters.regex(r"(?i)^stats$|^статистика$"), on_get_user_stats)
+    )
+
     # Возвращение статистики админа
-    dp.add_handler(CommandHandler('admin_stats', on_get_admin_stats, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler("admin_stats", on_get_admin_stats, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^admin[ _]stats$|^статистика[ _]админа$'),
-            on_get_admin_stats
+            FILTER_BY_ADMIN & Filters.regex(r"(?i)^admin[ _]stats$|^статистика[ _]админа$"),
+            on_get_admin_stats,
         )
     )
 
     # Возвращение количества оставшихся уникальных цитат
-    dp.add_handler(CommandHandler('get_number_of_unique_quotes', on_get_number_of_unique_quotes))
     dp.add_handler(
-        MessageHandler(
-            Filters.regex(r'^\?\?$'),
-            on_get_number_of_unique_quotes
-        )
+        CommandHandler("get_number_of_unique_quotes", on_get_number_of_unique_quotes)
+    )
+    dp.add_handler(
+        MessageHandler(Filters.regex(r"^\?\?$"), on_get_number_of_unique_quotes)
     )
 
     # Возвращение детального описания количества оставшихся уникальных цитат
-    dp.add_handler(CommandHandler('get_detail_of_unique_quotes', on_get_detail_of_unique_quotes))
     dp.add_handler(
-        MessageHandler(
-            Filters.regex(r'^\?\?\?$'),
-            on_get_detail_of_unique_quotes
-        )
+        CommandHandler("get_detail_of_unique_quotes", on_get_detail_of_unique_quotes)
+    )
+    dp.add_handler(
+        MessageHandler(Filters.regex(r"^\?\?\?$"), on_get_detail_of_unique_quotes)
     )
 
     # Возвращение статистики цитат
-    dp.add_handler(CommandHandler('quote_stats', on_get_quote_stats))
+    dp.add_handler(CommandHandler("quote_stats", on_get_quote_stats))
     dp.add_handler(
-        MessageHandler(
-            Filters.regex(PATTERN_QUOTE_STATS),
-            on_get_quote_stats
-        )
+        MessageHandler(Filters.regex(PATTERN_QUOTE_STATS), on_get_quote_stats)
     )
-    dp.add_handler(CallbackQueryHandler(on_get_quote_stats, pattern=PATTERN_QUERY_QUOTE_STATS))
-    dp.add_handler(CallbackQueryHandler(on_get_comics_stats, pattern=PATTERN_COMICS_STATS))
+    dp.add_handler(
+        CallbackQueryHandler(on_get_quote_stats, pattern=PATTERN_QUERY_QUOTE_STATS)
+    )
+    dp.add_handler(
+        CallbackQueryHandler(on_get_comics_stats, pattern=PATTERN_COMICS_STATS)
+    )
 
     # Возвращение порядка вызова указанной цитаты у текущего пользователя, сортировка от конца
-    dp.add_handler(CommandHandler('get_used_quote', on_get_used_quote_in_requests))
+    dp.add_handler(CommandHandler("get_used_quote", on_get_used_quote_in_requests))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^get[ _]used[ _]quote (\d+)$') | Filters.regex(r'^(\d+)$'),
-            on_get_used_quote_in_requests
+            Filters.regex(r"(?i)^get[ _]used[ _]quote (\d+)$")
+            | Filters.regex(r"^(\d+)$"),
+            on_get_used_quote_in_requests,
         )
     )
 
     # Возвращение порядка вызова у последней полученный цитаты у текущего пользователя, сортировка от конца
     dp.add_handler(
-        CommandHandler('get_used_last_quote', on_get_used_last_quote_in_requests)
+        CommandHandler("get_used_last_quote", on_get_used_last_quote_in_requests)
     )
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^get[ _]used[ _]last[ _]quote$|^\?$'),
-            on_get_used_last_quote_in_requests
+            Filters.regex(r"(?i)^get[ _]used[ _]last[ _]quote$|^\?$"),
+            on_get_used_last_quote_in_requests,
         )
     )
 
-    dp.add_handler(CommandHandler('get_users_short', on_get_users_short, FILTER_BY_ADMIN))
+    dp.add_handler(
+        CommandHandler("get_users_short", on_get_users_short, FILTER_BY_ADMIN)
+    )
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]users[ _]short$')),
-            on_get_users_short
+            FILTER_BY_ADMIN & (Filters.regex(r"(?i)^get[ _]users[ _]short$")),
+            on_get_users_short,
         )
     )
-    dp.add_handler(CallbackQueryHandler(on_get_users_short, pattern=PATTERN_GET_USERS_SHORT_BY_PAGE))
+    dp.add_handler(
+        CallbackQueryHandler(
+            on_get_users_short, pattern=PATTERN_GET_USERS_SHORT_BY_PAGE
+        )
+    )
 
-    dp.add_handler(CommandHandler('get_users', on_get_users, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler("get_users", on_get_users, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^get[ _]users$'),
-            on_get_users
+            FILTER_BY_ADMIN & Filters.regex(r"(?i)^get[ _]users$"), on_get_users
         )
     )
     dp.add_handler(CallbackQueryHandler(on_get_users, pattern=PATTERN_GET_USER_BY_PAGE))
 
-    dp.add_handler(CommandHandler('get_group_chats_short', on_get_group_chats_short, FILTER_BY_ADMIN))
     dp.add_handler(
-        MessageHandler(
-            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]group[ _]chats[ _]short$')),
-            on_get_group_chats_short
+        CommandHandler(
+            "get_group_chats_short", on_get_group_chats_short, FILTER_BY_ADMIN
         )
     )
-    dp.add_handler(CallbackQueryHandler(on_get_group_chats_short, pattern=PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE))
-
-    dp.add_handler(CommandHandler('get_quote', on_get_quote))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^get[ _]quote (\d+)$') | Filters.regex(r'(?i)^#(\d+)$'),
-            on_get_quote
+            FILTER_BY_ADMIN & (Filters.regex(r"(?i)^get[ _]group[ _]chats[ _]short$")),
+            on_get_group_chats_short,
         )
     )
-
     dp.add_handler(
-        MessageHandler(
-            Filters.regex(PATTERN_GET_BY_DATE),
-            on_get_quote_by_date
-        )
-    )
-    dp.add_handler(CallbackQueryHandler(on_get_quote_by_date, pattern=PATTERN_PAGE_GET_BY_DATE))
-
-    dp.add_handler(CommandHandler('get_external_quote', on_get_external_quote))
-    dp.add_handler(
-        MessageHandler(
-            Filters.regex(r'(?i)^get[ _]external[ _]quote (\d+)$'),
-            on_get_external_quote
+        CallbackQueryHandler(
+            on_get_group_chats_short, pattern=PATTERN_GET_GROUP_CHATS_SHORT_BY_PAGE
         )
     )
 
-    dp.add_handler(CommandHandler('update_quote', on_update_quote, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler("get_quote", on_get_quote))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^update[ _]quote (\d+)$'),
-            on_update_quote
+            Filters.regex(r"(?i)^get[ _]quote (\d+)$") | Filters.regex(r"(?i)^#(\d+)$"),
+            on_get_quote,
         )
     )
 
-    dp.add_handler(CommandHandler('find_my', on_find_my))
+    dp.add_handler(
+        MessageHandler(Filters.regex(PATTERN_GET_BY_DATE), on_get_quote_by_date)
+    )
+    dp.add_handler(
+        CallbackQueryHandler(on_get_quote_by_date, pattern=PATTERN_PAGE_GET_BY_DATE)
+    )
+
+    dp.add_handler(CommandHandler("get_external_quote", on_get_external_quote))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^find[ _]my (.+)$'),
-            on_find_my
+            Filters.regex(r"(?i)^get[ _]external[ _]quote (\d+)$"),
+            on_get_external_quote,
         )
     )
 
-    dp.add_handler(CommandHandler('find_new', on_find_new))
+    dp.add_handler(CommandHandler("update_quote", on_update_quote, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^find[ _]new (.+)$'),
-            on_find_new
+            FILTER_BY_ADMIN & Filters.regex(r"(?i)^update[ _]quote (\d+)$"),
+            on_update_quote,
         )
     )
 
-    dp.add_handler(CommandHandler('find', on_find))
+    dp.add_handler(CommandHandler("find_my", on_find_my))
     dp.add_handler(
         MessageHandler(
-            Filters.regex(r'(?i)^find (.+)$'),
-            on_find
+            Filters.regex(r"(?i)^find[ _]my (.+)$"),
+            on_find_my,
+        )
+    )
+
+    dp.add_handler(CommandHandler("find_new", on_find_new))
+    dp.add_handler(
+        MessageHandler(
+            Filters.regex(r"(?i)^find[ _]new (.+)$"),
+            on_find_new,
+        )
+    )
+
+    dp.add_handler(CommandHandler("find", on_find))
+    dp.add_handler(
+        MessageHandler(
+            Filters.regex(r"(?i)^find (.+)$"),
+            on_find,
         )
     )
 
     # Возвращение количества цитат в кэше
-    dp.add_handler(CommandHandler('cache', on_cache, FILTER_BY_ADMIN))
+    dp.add_handler(CommandHandler("cache", on_cache, FILTER_BY_ADMIN))
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & Filters.regex(r'(?i)^cache$'),
-            on_cache
+            FILTER_BY_ADMIN & Filters.regex(r"(?i)^cache$"),
+            on_cache,
         )
     )
 
-    dp.add_handler(CommandHandler('get_errors_short', on_get_errors_short, FILTER_BY_ADMIN))
+    dp.add_handler(
+        CommandHandler("get_errors_short", on_get_errors_short, FILTER_BY_ADMIN)
+    )
     dp.add_handler(
         MessageHandler(
-            FILTER_BY_ADMIN & (Filters.regex(r'(?i)^get[ _]errors[ _]short$')),
-            on_get_errors_short
+            FILTER_BY_ADMIN & (Filters.regex(r"(?i)^get[ _]errors[ _]short$")),
+            on_get_errors_short,
         )
     )
-    dp.add_handler(CallbackQueryHandler(on_get_errors_short, pattern=PATTERN_GET_ERRORS_SHORT_BY_PAGE))
+    dp.add_handler(
+        CallbackQueryHandler(
+            on_get_errors_short, pattern=PATTERN_GET_ERRORS_SHORT_BY_PAGE
+        )
+    )
 
     dp.add_handler(CallbackQueryHandler(on_get_quotes, pattern=PATTERN_GET_QUOTES))
 
     dp.add_handler(MessageHandler(Filters.text, on_request))
-    dp.add_handler(CallbackQueryHandler(on_quote_comics, pattern=r'^\d+$'))
+    dp.add_handler(CallbackQueryHandler(on_quote_comics, pattern=r"^\d+$"))
 
     fill_commands_for_help(dp)
 
