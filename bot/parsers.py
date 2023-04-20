@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'ipetrash'
+__author__ = "ipetrash"
 
 
 import inspect
@@ -20,7 +20,7 @@ from third_party import bash_im
 from third_party.notifications import send_telegram_notification_error
 
 
-NEXT_CHECKED_PAGE = DIR / '_NEXT_CHECKED_PAGE.txt'
+NEXT_CHECKED_PAGE = DIR / "_NEXT_CHECKED_PAGE.txt"
 
 
 def save_next_checked_page(page: int):
@@ -44,14 +44,14 @@ lock = RLock()
 
 
 def download_random_quotes(log: logging.Logger, dir_comics):
-    prefix = f'[{caller_name()}]'
+    prefix = f"[{caller_name()}]"
     i = 0
 
     while True:
         try:
             with lock:
                 count = db.Quote.select().count()
-                log.debug(f'{prefix} Quotes: {count}')
+                log.debug(f"{prefix} Quotes: {count}")
                 t = time.perf_counter_ns()
 
                 for quote in bash_im.get_random_quotes(log):
@@ -63,17 +63,18 @@ def download_random_quotes(log: logging.Logger, dir_comics):
 
                 elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
                 log.debug(
-                    f'{prefix} Added new quotes (random): %s, elapsed %s ms',
-                    db.Quote.select().count() - count, elapsed_ms
+                    f"{prefix} Added new quotes (random): %s, elapsed %s ms",
+                    db.Quote.select().count() - count,
+                    elapsed_ms,
                 )
 
         except:
-            log.exception(f'{prefix} Error:')
+            log.exception(f"{prefix} Error:")
 
         finally:
             # 3 - 15 minutes
             minutes = randint(3, 15)
-            log.debug(f'{prefix} Mini sleep: %s minutes', minutes)
+            log.debug(f"{prefix} Mini sleep: %s minutes", minutes)
 
             time.sleep(minutes * 60)
 
@@ -83,20 +84,20 @@ def download_random_quotes(log: logging.Logger, dir_comics):
 
                 # 3 - 6 hours
                 minutes = randint(3 * 60, 6 * 60)
-                log.debug(f'{prefix} Deep sleep: %s minutes', minutes)
+                log.debug(f"{prefix} Deep sleep: %s minutes", minutes)
 
                 time.sleep(minutes * 60)
 
 
 def download_main_page_quotes(log: logging.Logger, dir_comics):
-    prefix = f'[{caller_name()}]'
+    prefix = f"[{caller_name()}]"
 
     def run():
         while True:
             try:
                 with lock:
                     count = db.Quote.select().count()
-                    log.debug(f'{prefix} Quotes: {count}')
+                    log.debug(f"{prefix} Quotes: {count}")
                     t = time.perf_counter_ns()
 
                     for quote in bash_im.get_main_page_quotes(log):
@@ -108,14 +109,15 @@ def download_main_page_quotes(log: logging.Logger, dir_comics):
 
                     elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
                     log.debug(
-                        f'{prefix} Added new quotes (main page): %s, elapsed %s ms',
-                        db.Quote.select().count() - count, elapsed_ms
+                        f"{prefix} Added new quotes (main page): %s, elapsed %s ms",
+                        db.Quote.select().count() - count,
+                        elapsed_ms,
                     )
 
                 break
 
             except Exception:
-                log.exception(f'{prefix} Error:')
+                log.exception(f"{prefix} Error:")
 
                 log.info(f"{prefix} I'll try again in 1 minute ...")
                 time.sleep(60)
@@ -130,7 +132,7 @@ def download_main_page_quotes(log: logging.Logger, dir_comics):
 
 
 def download_seq_page_quotes(log: logging.Logger, dir_comics):
-    prefix = f'[{caller_name()}]'
+    prefix = f"[{caller_name()}]"
 
     i = 0
     while True:
@@ -139,12 +141,12 @@ def download_seq_page_quotes(log: logging.Logger, dir_comics):
 
             # Если дошли до последней страницы, начинаем заново
             if page < 1:
-                log.debug(f'{prefix} Starting over again')
+                log.debug(f"{prefix} Starting over again")
                 page = bash_im.get_total_pages()
 
             with lock:
                 count = db.Quote.select().count()
-                log.debug(f'{prefix} Quotes: {count}')
+                log.debug(f"{prefix} Quotes: {count}")
                 t = time.perf_counter_ns()
 
                 for quote in bash_im.get_page_quotes(page, log):
@@ -156,15 +158,17 @@ def download_seq_page_quotes(log: logging.Logger, dir_comics):
 
                 elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
                 log.debug(
-                    f'{prefix} Added new quotes (page %s): %s, elapsed %s ms',
-                    page, db.Quote.select().count() - count, elapsed_ms
+                    f"{prefix} Added new quotes (page %s): %s, elapsed %s ms",
+                    page,
+                    db.Quote.select().count() - count,
+                    elapsed_ms,
                 )
 
             page -= 1
             save_next_checked_page(page)
 
         except Exception:
-            log.exception(f'{prefix} Error:')
+            log.exception(f"{prefix} Error:")
 
             log.info(f"{prefix} I'll try again in 1 minute ...")
             time.sleep(60)
@@ -172,7 +176,7 @@ def download_seq_page_quotes(log: logging.Logger, dir_comics):
         finally:
             # 3 - 15 minutes
             minutes = randint(3, 15)
-            log.debug(f'{prefix} Mini sleep: %s minutes', minutes)
+            log.debug(f"{prefix} Mini sleep: %s minutes", minutes)
 
             time.sleep(minutes * 60)
 
@@ -182,19 +186,19 @@ def download_seq_page_quotes(log: logging.Logger, dir_comics):
 
                 # 3 - 6 hours
                 minutes = randint(3 * 60, 6 * 60)
-                log.debug(f'{prefix} Deep sleep: %s minutes', minutes)
+                log.debug(f"{prefix} Deep sleep: %s minutes", minutes)
 
                 time.sleep(minutes * 60)
 
 
 def run_parser_health_check(log: logging.Logger):
-    prefix = f'[{caller_name()}]'
+    prefix = f"[{caller_name()}]"
 
     def run():
         try:
             bash_im.parser_health_check(raise_error=True)
         except Exception as e:
-            log.exception(f'{prefix} Error:')
+            log.exception(f"{prefix} Error:")
             send_telegram_notification_error(log.name, str(e))
             db.Error.create_from(func=run_parser_health_check, e=e)
 

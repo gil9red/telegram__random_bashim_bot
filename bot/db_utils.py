@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'ipetrash'
+__author__ = "ipetrash"
 
 
 import datetime as DT
@@ -62,7 +62,7 @@ def process_request(log: logging.Logger):
             result = func(update, context)
             elapsed_ms = (time.perf_counter_ns() - t) // 1_000_000
 
-            log.debug(f'[{func_name}] Elapsed {elapsed_ms} ms')
+            log.debug(f"[{func_name}] Elapsed {elapsed_ms} ms")
 
             # Поддержка List[Quote] (для on_get_quotes). Это для учёта цитат среди
             # просмотренных ранее при получении группы цитат из результата поиска
@@ -95,6 +95,7 @@ def process_request(log: logging.Logger):
             return result
 
         return wrapper
+
     return actual_decorator
 
 
@@ -105,7 +106,7 @@ def catch_error(log: logging.Logger):
             try:
                 return func(update, context)
             except Exception as e:
-                log.exception('Error: %s\nUpdate: %s', context.error, update)
+                log.exception("Error: %s\nUpdate: %s", context.error, update)
 
                 Error.create_from(func, e, update)
 
@@ -113,11 +114,12 @@ def catch_error(log: logging.Logger):
                     reply_error(ERROR_TEXT, update, context)
 
         return wrapper
+
     return actual_decorator
 
 
 def get_user_message_repr(user: User) -> str:
-    return f'''\
+    return f"""\
     id: {user.id}
     first_name: {user.first_name}
     last_name: {user.last_name}
@@ -126,13 +128,13 @@ def get_user_message_repr(user: User) -> str:
     last_activity: {get_date_time_str(user.last_activity)}
     quotes: {user.get_total_quotes()}
     with comics: {user.get_total_quotes(with_comics=True)}
-    '''.rstrip()
+    """.rstrip()
 
 
 def db_create_backup(
         log: logging.Logger,
         backup_dir=BACKUP_DIR_NAME,
-        date_fmt='%Y-%m-%d'
+        date_fmt="%Y-%m-%d",
 ):
     backup_path = Path(backup_dir)
 
@@ -148,11 +150,11 @@ def db_create_backup(
     attempts = 5
     for i in range(attempts):
         try:
-            log.info(f'Создание бэкапа базы данных в: {zip_name}')
-            shutil.make_archive(zip_name, 'zip', DB_DIR_NAME)
+            log.info(f"Создание бэкапа базы данных в: {zip_name}")
+            shutil.make_archive(zip_name, "zip", DB_DIR_NAME)
 
-            log.info(f'Создание бэкапа комиксов в: {backup_path_comics}')
-            for f in DIR_COMICS.glob('*'):
+            log.info(f"Создание бэкапа комиксов в: {backup_path_comics}")
+            for f in DIR_COMICS.glob("*"):
                 if not f.is_file():
                     continue
 
@@ -160,7 +162,7 @@ def db_create_backup(
                 if backup_comics_file.exists():
                     continue
 
-                log.info(f'Сохранение {backup_comics_file.name}')
+                log.info(f"Сохранение {backup_comics_file.name}")
                 shutil.copyfile(f, backup_comics_file)
 
             # Всё хорошо завершилось, выходим из функции
@@ -185,23 +187,23 @@ def do_backup(log: logging.Logger):
 
 
 def update_quote(
-        quote_id: int,
-        update: Update = None,
-        context: CallbackContext = None,
-        log: logging.Logger = None,
+    quote_id: int,
+    update: Update = None,
+    context: CallbackContext = None,
+    log: logging.Logger = None,
 ):
     need_reply = update and context
 
     quote_bashim = bash_im.Quote.parse_from(quote_id)
     if not quote_bashim:
-        text = f'Цитаты #{quote_id} на сайте нет'
+        text = f"Цитаты #{quote_id} на сайте нет"
         log and log.info(text)
         need_reply and reply_error(text, update, context)
         return
 
     quote_db: db.Quote = db.Quote.get_or_none(quote_id)
     if not quote_db:
-        log and log.info(f'Цитаты #{quote_id} в базе нет, будет создание цитаты')
+        log and log.info(f"Цитаты #{quote_id} в базе нет, будет создание цитаты")
 
         # При отсутствии, цитата будет добавлена в базу
         db.Quote.get_from(quote_bashim)
@@ -209,7 +211,7 @@ def update_quote(
         # Сразу же пробуем скачать комиксы
         quote_bashim.download_comics(DIR_COMICS)
 
-        text = f'Цитата #{quote_id} добавлена в базу'
+        text = f"Цитата #{quote_id} добавлена в базу"
         log and log.info(text)
         need_reply and reply_info(text, update, context)
 
@@ -218,7 +220,7 @@ def update_quote(
 
         if quote_db.text != quote_bashim.text:
             quote_db.text = quote_bashim.text
-            modified_list.append('текст')
+            modified_list.append("текст")
 
         # Пробуем скачать комиксы
         quote_bashim.download_comics(DIR_COMICS)
@@ -232,7 +234,7 @@ def update_quote(
             need_reply and reply_info(text, update, context)
 
         else:
-            text = f'Нет изменений в цитате #{quote_id}'
+            text = f"Нет изменений в цитате #{quote_id}"
             log and log.info(text)
             need_reply and reply_info(text, update, context)
 
@@ -240,20 +242,20 @@ def update_quote(
 def get_html_message(quote_obj: Union[bash_im.Quote, db.Quote]) -> str:
     text = html.escape(quote_obj.text)
     footer = f"""<a href="{quote_obj.url}">{quote_obj.date_str} | #{quote_obj.id}</a>"""
-    return f'{text}\n\n{footer}'
+    return f"{text}\n\n{footer}"
 
 
 def reply_quote(
-        quote_obj: Union[bash_im.Quote, db.Quote],
-        update: Update,
-        context: CallbackContext,
-        reply_markup: ReplyKeyboardMarkup = None,
-        **kwargs
+    quote_obj: Union[bash_im.Quote, db.Quote],
+    update: Update,
+    context: CallbackContext,
+    reply_markup: ReplyKeyboardMarkup = None,
+    **kwargs,
 ):
     # Отправка цитаты и отключение link preview -- чтобы по ссылке не генерировалась превью
     update.effective_message.reply_html(
         get_html_message(quote_obj),
         disable_web_page_preview=True,
         reply_markup=reply_markup,
-        **kwargs
+        **kwargs,
     )
