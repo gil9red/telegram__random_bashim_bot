@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'ipetrash'
+__author__ = "ipetrash"
 
 
 import datetime as DT
@@ -19,7 +19,13 @@ from typing import Union, List, Optional
 
 import telegram.error
 from telegram import (
-    Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, Bot, Message, CallbackQuery
+    Update,
+    ReplyKeyboardMarkup,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    Bot,
+    Message,
+    CallbackQuery,
 )
 from telegram.ext import MessageHandler, CommandHandler, CallbackContext, Filters
 from telegram.ext.filters import MergedFilter
@@ -28,10 +34,21 @@ from telegram.ext.filters import MergedFilter
 from telegram_bot_pagination import InlineKeyboardPaginator
 
 from config import (
-    HELP_TEXT, ADMIN_USERNAME, TEXT_BUTTON_MORE, MAX_MESSAGE_LENGTH, DIR, DIR_LOG, COMMANDS_PER_PAGE,
-    DATE_FORMAT, DATE_TIME_FORMAT
+    HELP_TEXT,
+    ADMIN_USERNAME,
+    TEXT_BUTTON_MORE,
+    MAX_MESSAGE_LENGTH,
+    DIR,
+    DIR_LOG,
+    COMMANDS_PER_PAGE,
+    DATE_FORMAT,
+    DATE_TIME_FORMAT,
 )
-from bot.regexp_patterns import PATTERN_HELP_COMMON, PATTERN_HELP_ADMIN, fill_string_pattern
+from bot.regexp_patterns import (
+    PATTERN_HELP_COMMON,
+    PATTERN_HELP_ADMIN,
+    fill_string_pattern,
+)
 
 
 BOT: Bot = None
@@ -61,19 +78,23 @@ def split_list(items: List, columns: int = 5) -> List[List]:
 
 
 def get_logger(
-        name: str,
-        file: Union[str, Path] = 'log.txt',
-        encoding='utf-8',
-        log_stdout=True,
-        log_file=True
-) -> 'logging.Logger':
+    name: str,
+    file: Union[str, Path] = "log.txt",
+    encoding="utf-8",
+    log_stdout=True,
+    log_file=True,
+) -> "logging.Logger":
     log = logging.getLogger(name)
     log.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s')
+    formatter = logging.Formatter(
+        "[%(asctime)s] %(filename)s:%(lineno)d %(levelname)-8s %(message)s"
+    )
 
     if log_file:
-        fh = RotatingFileHandler(file, maxBytes=10000000, backupCount=5, encoding=encoding)
+        fh = RotatingFileHandler(
+            file, maxBytes=10000000, backupCount=5, encoding=encoding
+        )
         fh.setFormatter(formatter)
         log.addHandler(fh)
 
@@ -101,11 +122,11 @@ def has_admin_filter(filter_handler) -> bool:
 
 def get_deep_linking(argument, update: Update) -> str:
     from_message_id = update.effective_message.message_id
-    return f'[{argument}]({BOT.link}?start={argument}_{from_message_id})'
+    return f"[{argument}]({BOT.link}?start={argument}_{from_message_id})"
 
 
 def get_plural_days(n: int) -> str:
-    days = ['день', 'дня', 'дней']
+    days = ["день", "дня", "дней"]
 
     if n % 10 == 1 and n % 100 != 11:
         p = 0
@@ -120,8 +141,8 @@ def get_plural_days(n: int) -> str:
 def get_elapsed_time(date_time: DT.datetime) -> str:
     delta = DT.datetime.now() - date_time
     day = get_plural_days(delta.days)
-    diff = str(delta).replace('days', day).replace('day', day)
-    return diff.split('.')[0]
+    diff = str(delta).replace("days", day).replace("day", day)
+    return diff.split(".")[0]
 
 
 def get_date_time_str(date_time: DT.datetime) -> str:
@@ -134,9 +155,9 @@ def get_date_str(date: Union[DT.date, DT.datetime]) -> str:
 
 def replace_bad_symbols(text: str) -> str:
     return re.sub(
-        r'[^a-zA-Zа-яА-ЯёЁ\d ]',
-        lambda m: m.group().encode('unicode-escape').decode('utf-8'),
-        text
+        r"[^a-zA-Zа-яА-ЯёЁ\d ]",
+        lambda m: m.group().encode("unicode-escape").decode("utf-8"),
+        text,
     )
 
 
@@ -159,23 +180,22 @@ def fill_commands_for_help(dispatcher):
 
 
 def is_equal_inline_keyboards(
-        keyboard_1: Union[InlineKeyboardMarkup, str],
-        keyboard_2: InlineKeyboardMarkup
+    keyboard_1: Union[InlineKeyboardMarkup, str], keyboard_2: InlineKeyboardMarkup
 ) -> bool:
     if isinstance(keyboard_1, InlineKeyboardMarkup):
-        keyboard_1_inline_keyboard = keyboard_1.to_dict()['inline_keyboard']
+        keyboard_1_inline_keyboard = keyboard_1.to_dict()["inline_keyboard"]
     elif isinstance(keyboard_1, str):
-        keyboard_1_inline_keyboard = json.loads(keyboard_1)['inline_keyboard']
+        keyboard_1_inline_keyboard = json.loads(keyboard_1)["inline_keyboard"]
     else:
-        raise Exception(f'Unsupported format (keyboard_1={type(keyboard_1)})!')
+        raise Exception(f"Unsupported format (keyboard_1={type(keyboard_1)})!")
 
-    keyboard_2_inline_keyboard = keyboard_2.to_dict()['inline_keyboard']
+    keyboard_2_inline_keyboard = keyboard_2.to_dict()["inline_keyboard"]
     return keyboard_1_inline_keyboard == keyboard_2_inline_keyboard
 
 
 def get_page(
-        context: CallbackContext,
-        default_page: int = 1
+    context: CallbackContext,
+    default_page: int = 1,
 ) -> int:
     try:
         if context.match and context.match.groups():
@@ -199,7 +219,9 @@ def reply_text_or_edit_with_keyboard(
     # Для запросов CallbackQuery нужно менять текущее сообщение
     if query:
         # Fix error: "telegram.error.BadRequest: Message is not modified"
-        if text == query.message.text and is_equal_inline_keyboards(reply_markup, query.message.reply_markup):
+        if text == query.message.text and is_equal_inline_keyboards(
+            reply_markup, query.message.reply_markup
+        ):
             return
 
         try:
@@ -209,7 +231,7 @@ def reply_text_or_edit_with_keyboard(
                 **kwargs,
             )
         except telegram.error.BadRequest as e:
-            if 'Message is not modified' in str(e):
+            if "Message is not modified" in str(e):
                 return
 
             raise e
@@ -224,17 +246,17 @@ def reply_text_or_edit_with_keyboard(
 
 
 def reply_text_or_edit_with_keyboard_paginator(
-        message: Message,
-        query: Optional[CallbackQuery],
-        text: str,
-        page_count: int,
-        items_per_page: int,
-        current_page: int,
-        data_pattern: str,
-        before_inline_buttons: List[InlineKeyboardButton] = None,
-        after_inline_buttons: List[InlineKeyboardButton] = None,
-        quote: bool = False,
-        **kwargs,
+    message: Message,
+    query: Optional[CallbackQuery],
+    text: str,
+    page_count: int,
+    items_per_page: int,
+    current_page: int,
+    data_pattern: str,
+    before_inline_buttons: List[InlineKeyboardButton] = None,
+    after_inline_buttons: List[InlineKeyboardButton] = None,
+    quote: bool = False,
+    **kwargs,
 ):
     page_count = math.ceil(page_count / items_per_page)
 
@@ -280,21 +302,23 @@ def log_func(log: logging.Logger):
                 try:
                     message = update.effective_message.text
                 except:
-                    message = ''
+                    message = ""
 
                 try:
                     query_data = update.callback_query.data
 
                     # Содержит текущий текст сообщения, под которым была inline-кнопка
                     # Нет смысла логировать этот текст
-                    message = '<hidden>'
+                    message = "<hidden>"
                 except:
-                    query_data = ''
+                    query_data = ""
 
-                msg = f'[chat_id={chat_id}, user_id={user_id}, ' \
-                      f'first_name={first_name!r}, last_name={last_name!r}, ' \
-                      f'username={username!r}, language_code={language_code}, ' \
-                      f'message={message!r}, query_data={query_data!r}]'
+                msg = (
+                    f"[chat_id={chat_id}, user_id={user_id}, "
+                    f"first_name={first_name!r}, last_name={last_name!r}, "
+                    f"username={username!r}, language_code={language_code}, "
+                    f"message={message!r}, query_data={query_data!r}]"
+                )
                 msg = func.__name__ + msg
 
                 log.debug(msg)
@@ -302,6 +326,7 @@ def log_func(log: logging.Logger):
             return func(update, context)
 
         return wrapper
+
     return actual_decorator
 
 
@@ -329,17 +354,19 @@ def reply_help(update: Update, context: CallbackContext):
         pattern_help = PATTERN_HELP_COMMON
         all_items = COMMON_COMMANDS
         button_help_change_type_page = InlineKeyboardButton(
-            '➡️ Команды админа', callback_data=fill_string_pattern(PATTERN_HELP_ADMIN, 1)
+            "➡️ Команды админа",
+            callback_data=fill_string_pattern(PATTERN_HELP_ADMIN, 1),
         )
     else:
         pattern_help = PATTERN_HELP_ADMIN
         all_items = ADMIN_COMMANDS
         button_help_change_type_page = InlineKeyboardButton(
-            '⬅️ Общие команды', callback_data=fill_string_pattern(PATTERN_HELP_COMMON, 1)
+            "⬅️ Общие команды",
+            callback_data=fill_string_pattern(PATTERN_HELP_COMMON, 1),
         )
 
     # Элементы текущей страницы
-    items = all_items[(page - 1) * items_per_page: page * items_per_page]
+    items = all_items[(page - 1) * items_per_page : page * items_per_page]
 
     username = update.effective_user.username
     is_admin = username == ADMIN_USERNAME[1:]
@@ -348,9 +375,9 @@ def reply_help(update: Update, context: CallbackContext):
     else:
         after_inline_buttons = None
 
-    text = '\n\n'.join(items)
+    text = "\n\n".join(items)
     if show_common_help:
-        text = HELP_TEXT + '\n\n' + text
+        text = HELP_TEXT + "\n\n" + text
 
     reply_text_or_edit_with_keyboard_paginator(
         message, query,
@@ -358,33 +385,33 @@ def reply_help(update: Update, context: CallbackContext):
         page_count=len(all_items),
         items_per_page=items_per_page,
         current_page=page,
-        data_pattern=fill_string_pattern(pattern_help, '{page}'),
+        data_pattern=fill_string_pattern(pattern_help, "{page}"),
         after_inline_buttons=after_inline_buttons,
     )
 
 
 def reply_error(text: str, update: Update, context: CallbackContext, **kwargs):
-    text = '⚠ ' + text
+    text = "⚠ " + text
     if len(text) > MAX_MESSAGE_LENGTH:
-        text = text[:MAX_MESSAGE_LENGTH-3] + '...'
+        text = text[: MAX_MESSAGE_LENGTH - 3] + "..."
 
     update.effective_message.reply_text(text, **kwargs)
 
 
 def reply_info(text: str, update: Update, context: CallbackContext, **kwargs):
-    text = 'ℹ️ ' + text
+    text = "ℹ️ " + text
     if len(text) > MAX_MESSAGE_LENGTH:
-        text = text[:MAX_MESSAGE_LENGTH-3] + '...'
+        text = text[: MAX_MESSAGE_LENGTH - 3] + "..."
 
     update.effective_message.reply_text(text, **kwargs)
 
 
 log = get_logger(
     DIR.name,
-    DIR_LOG / f'{Path(__file__).resolve().parent.name}.log'
+    DIR_LOG / f"{Path(__file__).resolve().parent.name}.log",
 )
 
 log_backup = get_logger(
-    f'{DIR.name}_backup',
-    DIR_LOG / 'backup.log'
+    f"{DIR.name}_backup",
+    DIR_LOG / "backup.log",
 )
