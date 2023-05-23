@@ -2,5 +2,5 @@ beautifulsoup4==4.10.0
 peewee==3.14.4
 python-telegram-bot==13.7
 python-telegram-bot-pagination==0.0.2
-requests==2.26.0
+requests==2.31.0
 schedule==1.1.0
