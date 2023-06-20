@@ -8,7 +8,7 @@ import datetime as DT
 import re
 import time
 import traceback
-from typing import List, Optional, Union, Callable, Tuple, Dict, Type, Iterable
+from typing import List, Optional, Union, Callable, Tuple, Dict, Type, Iterable, TypeVar
 
 # pip install peewee
 from peewee import (
@@ -75,16 +75,19 @@ db_error = SqliteQueueDatabase(
 )
 
 
+ChildModel = TypeVar("ChildModel", bound="BaseModel")
+
+
 class BaseModel(Model):
     class Meta:
         database = db
 
     @classmethod
-    def get_first(cls) -> Type["BaseModel"]:
+    def get_first(cls) -> ChildModel:
         return cls.select().first()
 
     @classmethod
-    def get_last(cls) -> Type["BaseModel"]:
+    def get_last(cls) -> ChildModel:
         return cls.select().order_by(cls.id.desc()).first()
 
     @classmethod
@@ -94,7 +97,7 @@ class BaseModel(Model):
         items_per_page: int = ITEMS_PER_PAGE,
         order_by: Field = None,
         filters: Iterable = None,
-    ) -> List[Type["BaseModel"]]:
+    ) -> List[ChildModel]:
         query = cls.select()
 
         if filters:
