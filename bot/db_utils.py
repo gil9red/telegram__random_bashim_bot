@@ -4,7 +4,7 @@
 __author__ = "ipetrash"
 
 
-import datetime as DT
+import datetime as dt
 import functools
 import html
 import logging
@@ -144,7 +144,7 @@ def db_create_backup(
     backup_path_comics = backup_path / DIR_COMICS.name
     backup_path_comics.mkdir(parents=True, exist_ok=True)
 
-    zip_name = DT.datetime.today().strftime(date_fmt)
+    zip_name = dt.datetime.today().strftime(date_fmt)
     zip_name = backup_path_db / zip_name
 
     attempts = 5
@@ -226,7 +226,7 @@ def update_quote(
         quote_bashim.download_comics(DIR_COMICS)
 
         if modified_list:
-            quote_db.modification_date = DT.date.today()
+            quote_db.modification_date = dt.date.today()
             quote_db.save()
 
             text = f'Цитата #{quote_id} обновлена ({", ".join(modified_list)})'

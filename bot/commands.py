@@ -4,7 +4,7 @@
 __author__ = "ipetrash"
 
 
-import datetime as DT
+import datetime as dt
 import enum
 import logging
 import re
@@ -902,7 +902,7 @@ def on_get_quote_by_date(update: Update, context: CallbackContext) -> Optional[d
         page = default_page
         date_str = message.text
 
-    date = DT.datetime.strptime(date_str, db.DATE_FORMAT_QUOTE).date()
+    date = dt.datetime.strptime(date_str, db.DATE_FORMAT_QUOTE).date()
 
     # Показываем по одной цитате
     items_per_page = 1

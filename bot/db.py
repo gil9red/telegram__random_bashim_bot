@@ -4,7 +4,7 @@
 __author__ = "ipetrash"
 
 
-import datetime as DT
+import datetime as dt
 import re
 import time
 import traceback
@@ -174,7 +174,7 @@ class User(BaseModel):
     last_name = TextField(null=True)
     username = TextField(null=True)
     language_code = TextField(null=True)
-    last_activity = DateTimeField(default=DT.datetime.now)
+    last_activity = DateTimeField(default=dt.datetime.now)
     settings = ForeignKeyField(Settings, null=True)
 
     def actualize(self, user: Optional[telegram.User]):
@@ -182,7 +182,7 @@ class User(BaseModel):
         self.last_name = user.last_name
         self.username = user.username
         self.language_code = user.language_code
-        self.last_activity = DT.datetime.now()
+        self.last_activity = dt.datetime.now()
 
         self.save()
 
@@ -310,7 +310,7 @@ class Chat(BaseModel):
     first_name = TextField(null=True)
     last_name = TextField(null=True)
     description = TextField(null=True)
-    last_activity = DateTimeField(default=DT.datetime.now)
+    last_activity = DateTimeField(default=dt.datetime.now)
 
     def actualize(self, chat: Optional[telegram.Chat]):
         self.type = chat.type
@@ -319,7 +319,7 @@ class Chat(BaseModel):
         self.first_name = chat.first_name
         self.last_name = chat.last_name
         self.description = chat.description
-        self.last_activity = DT.datetime.now()
+        self.last_activity = dt.datetime.now()
 
         self.save()
 
@@ -386,7 +386,7 @@ class Quote(BaseModel):
     text = TextField()
     date = DateField()
     rating = IntegerField()
-    modification_date = DateField(default=DT.date.today)
+    modification_date = DateField(default=dt.date.today)
 
     @property
     def date_str(self) -> str:
@@ -538,7 +538,7 @@ class Quote(BaseModel):
         cls,
         page: int = 1,
         items_per_page: int = ITEMS_PER_PAGE,
-        date: DT.date = None,
+        date: dt.date = None,
     ) -> List["Quote"]:
         assert date, "Parameter 'date' must be defined!"
 
@@ -551,8 +551,8 @@ class Quote(BaseModel):
 
     @classmethod
     def get_nearest_dates(
-        cls, date: DT.date = None
-    ) -> Tuple[Optional[DT.date], Optional[DT.date]]:
+        cls, date: dt.date = None
+    ) -> Tuple[Optional[dt.date], Optional[dt.date]]:
         query_nearest_before = (
             cls.select(cls.date)
             .where(cls.date < date)
@@ -596,7 +596,7 @@ class Comics(BaseModel):
 
 class Request(BaseModel):
     func_name = TextField()
-    date_time = DateTimeField(default=DT.datetime.now)
+    date_time = DateTimeField(default=dt.datetime.now)
     elapsed_ms = IntegerField()
     user = ForeignKeyField(User, null=True, backref="requests")
     chat = ForeignKeyField(Chat, null=True, backref="requests")
@@ -624,7 +624,7 @@ class Request(BaseModel):
         return query
 
     @classmethod
-    def get_first_date_time(cls) -> DT.datetime:
+    def get_first_date_time(cls) -> dt.datetime:
         return cls.select().order_by(cls.id).first().date_time
 
 
@@ -632,7 +632,7 @@ class Error(BaseModel):
     class Meta:
         database = db_error
 
-    date_time = DateTimeField(default=DT.datetime.now)
+    date_time = DateTimeField(default=dt.datetime.now)
     func_name = TextField()
     exception_class = TextField()
     error_text = TextField()
@@ -716,7 +716,7 @@ if __name__ == "__main__":
     # print(admin.get_list_years_of_quotes())
     print()
 
-    date = DT.date.fromisoformat("2006-01-08")
+    date = dt.date.fromisoformat("2006-01-08")
     items = Quote.paginating_by_date(date=date)
     print(len(items), items)  # 0 []
 

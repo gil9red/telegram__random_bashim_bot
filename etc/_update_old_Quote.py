@@ -4,9 +4,9 @@
 __author__ = "ipetrash"
 
 
-import datetime as DT
-from random import randint
+import datetime as dt
 import time
+from random import randint
 
 from bot.db_utils import update_quote
 from bot.db import Quote, fn
@@ -15,7 +15,7 @@ from bot.db import Quote, fn
 i = 0
 for quote in (
     Quote.select()
-    .where(Quote.modification_date <= DT.date(2020, 9, 6))
+    .where(Quote.modification_date <= dt.date(2020, 9, 6))
     .order_by(fn.Random())
 ):
     i += 1

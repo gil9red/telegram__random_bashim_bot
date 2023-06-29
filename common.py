@@ -4,7 +4,7 @@
 __author__ = "ipetrash"
 
 
-import datetime as DT
+import datetime as dt
 import functools
 import inspect
 import json
@@ -63,7 +63,7 @@ FILTER_BY_ADMIN = Filters.user(username=ADMIN_USERNAME)
 COMMON_COMMANDS: List[str] = []
 ADMIN_COMMANDS: List[str] = []
 
-START_TIME = DT.datetime.now()
+START_TIME = dt.datetime.now()
 
 
 def split_list(items: List, columns: int = 5) -> List[List]:
@@ -138,18 +138,18 @@ def get_plural_days(n: int) -> str:
     return days[p]
 
 
-def get_elapsed_time(date_time: DT.datetime) -> str:
-    delta = DT.datetime.now() - date_time
+def get_elapsed_time(date_time: dt.datetime) -> str:
+    delta = dt.datetime.now() - date_time
     day = get_plural_days(delta.days)
     diff = str(delta).replace("days", day).replace("day", day)
     return diff.split(".")[0]
 
 
-def get_date_time_str(date_time: DT.datetime) -> str:
+def get_date_time_str(date_time: dt.datetime) -> str:
     return date_time.strftime(DATE_TIME_FORMAT)
 
 
-def get_date_str(date: Union[DT.date, DT.datetime]) -> str:
+def get_date_str(date: Union[dt.date, dt.datetime]) -> str:
     return date.strftime(DATE_FORMAT)
 
 
