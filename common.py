@@ -83,7 +83,7 @@ def get_logger(
     encoding="utf-8",
     log_stdout=True,
     log_file=True,
-) -> "logging.Logger":
+) -> logging.Logger:
     log = logging.getLogger(name)
     log.setLevel(logging.DEBUG)
 
