@@ -39,7 +39,7 @@ from config import (
     TEXT_BUTTON_MORE,
     MAX_MESSAGE_LENGTH,
     DIR,
-    DIR_LOG,
+    DIR_LOGS,
     COMMANDS_PER_PAGE,
     DATE_FORMAT,
     DATE_TIME_FORMAT,
@@ -408,10 +408,10 @@ def reply_info(text: str, update: Update, context: CallbackContext, **kwargs):
 
 log = get_logger(
     DIR.name,
-    DIR_LOG / f"{Path(__file__).resolve().parent.name}.log",
+    DIR_LOGS / f"{Path(__file__).resolve().parent.name}.log",
 )
 
 log_backup = get_logger(
     f"{DIR.name}_backup",
-    DIR_LOG / "backup.log",
+    DIR_LOGS / "backup.log",
 )

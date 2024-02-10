@@ -10,8 +10,8 @@ from pathlib import Path
 
 DIR = Path(__file__).resolve().parent
 
-DIR_LOG = DIR / "logs"
-DIR_LOG.mkdir(parents=True, exist_ok=True)
+DIR_LOGS = DIR / "logs"
+DIR_LOGS.mkdir(parents=True, exist_ok=True)
 
 TOKEN_FILE_NAME = DIR / "TOKEN.txt"
 TOKEN = os.environ.get("TOKEN") or TOKEN_FILE_NAME.read_text("utf-8").strip()
